@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>Maryland Birth &amp; Death Record Search (example)</title>
+    <meta name="description" content="A genealogy research tool for locating historical Maryland birth and death certificate scans by county, date, or series.">
+
+    <link rel="stylesheet" href="style.css">
+
+    <!-- Library files, deferred. No build step - this is the whole library. -->
+    <script defer src="../../src/core/namespace.js"></script>
+    <script defer src="../../src/core/counties.js"></script>
+    <script defer src="../../src/core/base-series.js"></script>
+
+    <script defer src="../../src/series/se42.js"></script>
+    <script defer src="../../src/series/se43.js"></script>
+    <script defer src="../../src/series/se44.js"></script>
+    <script defer src="../../src/series/se45.js"></script>
+    <script defer src="../../src/series/se46-data.js"></script>
+    <script defer src="../../src/series/se46.js"></script>
+    <script defer src="../../src/series/cm1132.js"></script>
+    <script defer src="../../src/series/cm1135.js"></script>
+    <script defer src="../../src/series/ce502.js"></script>
+    <script defer src="../../src/series/s1988.js"></script>
+    <script defer src="../../src/series/sm35.js"></script>
+    <script defer src="../../src/series/s1963.js"></script>
+
+    <script defer src="../../src/core/series-registry.js"></script>
+    <script defer src="../../src/core/lookup.js"></script>
+
+    <!-- This example page's own glue code - not part of the library. -->
+    <script defer src="app.js"></script>
+</head>
+
+<body>
+
+<main>
+
+<div class="mdrs-widget">
+
+<h1>Maryland Birth &amp; Death Record Search</h1>
+<p class="mdrs-subtitle">A genealogy research tool for locating historical Maryland birth and death certificate scans.</p>
+
+<p>
+    This page is a <strong>reference implementation</strong> showing how to
+    call the MDRecordSearch library from your own site's search UI. See
+    <code>app.js</code> for the function calls that do all the work:
+    <code>MDRecordSearch.lookup(...)</code>,
+    <code>MDRecordSearch.lookupSeries(...)</code>, and
+    <code>MDRecordSearch.lookupCertificate(...)</code>.
+</p>
+
+<h2>Available series <span id="mdrs-library-version"></span></h2>
+<div id="mdrs-series-info">Loading...</div>
+
+<form id="mdrs-lookup-form">
+
+    <div class="mdrs-record-type-toggle">
+        <span class="mdrs-toggle-label">Birth</span>
+
+        <label class="mdrs-toggle-switch">
+            <input type="checkbox" id="mdrs-record-type" checked>
+            <span class="mdrs-toggle-track"><span class="mdrs-toggle-thumb"></span></span>
+        </label>
+
+        <span class="mdrs-toggle-label" data-active="true">Death</span>
+    </div>
+
+    <h3>Location / Date Search</h3>
+
+    <label>
+        Location
+
+        <select id="mdrs-location">
+            <option value="">Select</option>
+
+            <optgroup label="Maryland Counties">
+                <option>Allegany</option>
+                <option>Anne Arundel</option>
+                <option>Baltimore</option>
+                <option>Calvert</option>
+                <option>Caroline</option>
+                <option>Carroll</option>
+                <option>Cecil</option>
+                <option>Charles</option>
+                <option>Dorchester</option>
+                <option>Frederick</option>
+                <option>Garrett</option>
+                <option>Harford</option>
+                <option>Howard</option>
+                <option>Kent</option>
+                <option>Montgomery</option>
+                <option>Prince George's</option>
+                <option>Queen Anne's</option>
+                <option>Saint Mary's</option>
+                <option>Somerset</option>
+                <option>Talbot</option>
+                <option>Washington</option>
+                <option>Wicomico</option>
+                <option>Worcester</option>
+            </optgroup>
+
+            <optgroup label="Baltimore City">
+                <option>Baltimore City</option>
+            </optgroup>
+        </select>
+    </label>
+
+    <label>
+        Month
+
+        <select id="mdrs-month">
+            <option value="">All months (search full year)</option>
+            <option value="1">January</option>
+            <option value="2">February</option>
+            <option value="3">March</option>
+            <option value="4">April</option>
+            <option value="5">May</option>
+            <option value="6">June</option>
+            <option value="7">July</option>
+            <option value="8">August</option>
+            <option value="9">September</option>
+            <option value="10">October</option>
+            <option value="11">November</option>
+            <option value="12">December</option>
+        </select>
+    </label>
+
+    <label>
+        Year
+        <input id="mdrs-year" type="number" min="1875" max="2014">
+    </label>
+
+    <label>
+        Series ID
+        <input id="mdrs-series-id" type="text" placeholder="SE45-1037">
+    </label>
+
+    <label>
+        Certificate Number
+        <input id="mdrs-certificate-number" type="text" placeholder="B45678 (CM1132) or 1995-1234 (SE46)">
+    </label>
+
+    <button type="submit">Lookup</button>
+
+</form>
+
+<section id="mdrs-results"></section>
+
+<p class="mdrs-footer-note">
+    Found a wrong result (wrong county, month, or series linked)?
+    <a id="mdrs-report-issue" href="#" target="_blank">Report it</a>.
+</p>
+
+</div>
+
+</main>
+
+</body>
+
+</html>

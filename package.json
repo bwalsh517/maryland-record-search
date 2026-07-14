@@ -1,0 +1,42 @@
+{
+  "name": "maryland-record-search",
+  "version": "1.0.0",
+  "description": "Lookup engine for locating Maryland vital record certificate scans (birth and death) on archive.org and the MSA guide, by county/date, series ID, or certificate number.",
+  "main": "src/index.js",
+  "type": "commonjs",
+  "author": "Brian Walsh",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/bwalsh517/maryland-record-search.git"
+  },
+  "homepage": "https://github.com/bwalsh517/maryland-record-search",
+  "bugs": {
+    "url": "https://github.com/bwalsh517/maryland-record-search/issues"
+  },
+  "scripts": {
+    "test": "node --test test/**/*.test.js",
+    "test:coverage": "node --test --experimental-test-coverage --test-coverage-exclude=\"test/**\" --test-coverage-lines=90 --test-coverage-branches=80 --test-coverage-functions=90 test/core/*.test.js test/series/*.test.js",
+    "lint": "eslint .",
+    "release": "node scripts/release.js"
+  },
+  "keywords": [
+    "genealogy",
+    "maryland",
+    "vital-records",
+    "death-certificates",
+    "birth-certificates",
+    "baltimore",
+    "archive.org"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=22"
+  },
+  "files": [
+    "src"
+  ],
+  "devDependencies": {
+    "eslint": "^10.0.0",
+    "@eslint/js": "^10.0.0"
+  }
+}

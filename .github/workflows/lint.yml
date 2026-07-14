@@ -1,0 +1,23 @@
+name: Lint
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      # npm install, not npm ci - no package-lock.json is committed
+      # (would require running npm locally at least once to generate
+      # it), so this resolves and installs eslint fresh on the runner
+      # every time. Nothing npm-related ever needs to run locally.
+      - run: npm install
+      - run: npm run lint
