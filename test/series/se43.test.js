@@ -5,7 +5,16 @@ const { lookup, lookupSeries } = require("../../src/index.js");
 
 
 const locationDateCases = [
-    { name: "first SE43 file", location: "Anne Arundel", month: 5, year: 1910, expected: 1 },
+    { name: "Begin 1st order Anne Arundel May 1910", location: "Anne Arundel", month: 5, year: 1910, expected: 1 },
+    { name: "Begin 1st order Calvert May 1910", location: "Calvert", month: 5, year: 1910, expected: 8 },
+    { name: "End 1st order: Allegany Dec 1915", location: "Allegany", month: 12, year: 1915, expected: 1543 },
+    { name: "End 1st order: Calvert Dec 1915", location: "Calvert", month: 12, year: 1915, expected: 1549 },
+    { name: "Begin 2nd order: Allegany Jan 1916", location: "Allegany", month: 1, year: 1916, expected: 1565 },
+    { name: "Begin 2nd order: Calvert Jan 1916", location: "Calvert", month: 1, year: 1916, expected: 1568 },
+    { name: "End 2nd order: Allegany Dec 1944", location: "Allegany", month: 12, year: 1944, expected: 7862 },
+    { name: "End 2nd order: Calvert Dec 1944", location: "Calvert", month: 12, year: 1944, expected: 7865 },
+    { name: "Begin 3rd order: Allegany Jan 1945", location: "Allegany", month: 1, year: 1945, expected: 7886 },
+    { name: "Begin 3rd order: Calvert Jan 1945", location: "Calvert", month: 1, year: 1945, expected: 7892 },
     { name: "last file before yearly block", location: "Worcester", month: 12, year: 1923, expected: 3774 },
     { name: "first yearly block file", location: "Worcester", month: 1, year: 1924, expected: 3807 },
     { name: "Worcester Dec 1924 yearly file", location: "Worcester", month: 12, year: 1924, expected: 3807 },

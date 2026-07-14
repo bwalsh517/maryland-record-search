@@ -240,9 +240,12 @@ if (typeof require !== "undefined") {
         }
 
 
+        // County order switches a few times.
+        // Between Jan 1916 - Dec 1944 counties are in full alphabetical order
+        // Before and after that the counties are in order by state 2 letter code
         countyOrder(year, month) {
 
-            if (year * 100 + month >= 191601) {
+            if (year * 100 + month >= 191601 && year * 100 + month <= 194412) {
                 return alphabeticalCountyOrder();
             }
 
