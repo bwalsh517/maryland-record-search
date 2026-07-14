@@ -297,6 +297,27 @@ if (typeof require !== "undefined") {
         }
 
 
+        // SE43-3223 through SE43-3452 (Jan 1922 - Oct 1922) link to the
+        // MSA guide's per-item page instead of archive.org. These
+        // numbers fall within the archive.org bundle named
+        // "3223-3475", but scans for 3223-3452 specifically are
+        // missing from that bundle - confirmed directly against the
+        // real archive.org contents, not assumed from the bundle's own
+        // advertised name (3223-3475 is what the collection claims to
+        // cover, not proof of what's actually in it - the same kind of
+        // trap that caused SE45's ARCHIVE_RANGES bug). SE43-3453
+        // through SE43-3475 (Nov-Dec 1922) do have real scans and still
+        // resolve normally below.
+        archiveUrl(number) {
+
+            if (number >= 3223 && number <= 3452) {
+                return `https://guide.msa.maryland.gov/pages/item.aspx?ID=SE43-${number}`;
+            }
+
+            return super.archiveUrl(number);
+        }
+
+
         lookupLocationMonthYear(location, month, year) {
 
             const county = normalizeCounty(location);
