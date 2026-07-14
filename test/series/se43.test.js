@@ -54,3 +54,48 @@ test("SE43 does not handle Baltimore City (that routes to the CM1132/CE502 serie
         "SE43 should never appear in Baltimore City results"
     );
 });
+
+
+// Regression guard for a real data gap: SE43-3223 through SE43-3452
+// (Jan 1922 - Oct 1922) fall inside the 3223-3475 archive.org bundle's
+// advertised range, but scans for exactly that stretch are missing
+// from the bundle itself. These numbers should link to the MSA guide
+// instead of a nonexistent archive.org file. 3453-3475 (Nov-Dec 1922)
+// have real scans and are unaffected.
+test("SE43-3223 (Jan 1922, first missing-scan record) links to the MSA guide, not archive.org", () => {
+    const results = lookup({ location: "Allegany", month: 1, year: 1922 });
+
+    assert.equal(results[0].number, 3223);
+    assert.equal(results[0].url, "https://guide.msa.maryland.gov/pages/item.aspx?ID=SE43-3223");
+});
+
+
+test("SE43-3452 (Oct 1922, last missing-scan record) links to the MSA guide, not archive.org", () => {
+    const results = lookup({ location: "Worcester", month: 10, year: 1922 });
+
+    assert.equal(results[0].number, 3452);
+    assert.equal(results[0].url, "https://guide.msa.maryland.gov/pages/item.aspx?ID=SE43-3452");
+});
+
+
+test("SE43-3222 (just before the gap) still resolves to archive.org normally", () => {
+    assert.equal(
+        lookupSeries("SE43-3222")[0].url,
+        "https://archive.org/details/reclaim-the-records-maryland-death-certificates-1910-1921-msa-se-43-2395-3222/Reclaim_The_Records_-_Maryland_Death_Certificates_1910-1921_-_msa_se43_-_03222/"
+    );
+});
+
+
+test("SE43-3453 (just after the gap, Nov 1922) still resolves to archive.org normally", () => {
+    const results = lookup({ location: "Worcester", month: 11, year: 1922 });
+
+    assert.equal(results[0].number, 3475);
+    assert.ok(results[0].url.startsWith("https://archive.org/details/"));
+});
+
+
+test("SE43-3453 through SE43-3475 all resolve to archive.org, not the MSA guide", () => {
+    for (const n of [3453, 3460, 3475]) {
+        assert.ok(lookupSeries(`SE43-${n}`)[0].url.startsWith("https://archive.org/details/"));
+    }
+});
