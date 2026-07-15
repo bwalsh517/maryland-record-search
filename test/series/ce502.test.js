@@ -6,12 +6,20 @@ const { lookup, lookupYear, lookupSeries, lookupCertificate, listSeries, SERIES 
 const ce502 = SERIES.find(s => s.name === "CE502");
 
 
-test("CE502-1 and CE502-95 resolve to the correct archive.org URLs (across an ARCHIVE_RANGES boundary)", () => {
+test("CE502-1 and CE502-94 resolve within the 1-94 archive.org chunk", () => {
     assert.equal(
         lookupSeries("CE502-1")[0].url,
         "https://archive.org/details/reclaim-the-records-baltimore-city-death-certificates-msa-ce-502-000001-94/Reclaim_The_Records_-_Baltimore_City_Death_Certificates_-_msa_ce502_000001/"
     );
 
+    assert.equal(
+        lookupSeries("CE502-94")[0].url,
+        "https://archive.org/details/reclaim-the-records-baltimore-city-death-certificates-msa-ce-502-000001-94/Reclaim_The_Records_-_Baltimore_City_Death_Certificates_-_msa_ce502_000094/"
+    );
+});
+
+
+test("CE502-95 correctly rolls into the 95-387 chunk, not the 1-94 chunk", () => {
     assert.equal(
         lookupSeries("CE502-95")[0].url,
         "https://archive.org/details/reclaim-the-records-baltimore-city-death-certificates-msa-ce-502-000095-387/Reclaim_The_Records_-_Baltimore_City_Death_Certificates_-_msa_ce502_000095/"
@@ -19,15 +27,65 @@ test("CE502-1 and CE502-95 resolve to the correct archive.org URLs (across an AR
 });
 
 
-test("listSeries() now reports CE502 as supporting both location and certificate search", () => {
-    const entry = listSeries().find(s => s.name === "CE502");
+test("CE502-387 and CE502-388 straddle the 95-387 / 388-523 chunk boundary correctly", () => {
+    assert.equal(
+        lookupSeries("CE502-387")[0].url,
+        "https://archive.org/details/reclaim-the-records-baltimore-city-death-certificates-msa-ce-502-000095-387/Reclaim_The_Records_-_Baltimore_City_Death_Certificates_-_msa_ce502_000387/"
+    );
 
-    assert.ok(entry);
-    assert.equal(entry.supportsLocationSearch, true);
-    assert.equal(entry.supportsCertificateNumberSearch, true);
+    assert.equal(
+        lookupSeries("CE502-388")[0].url,
+        "https://archive.org/details/reclaim-the-records-baltimore-city-death-certificates-msa-ce-502-000388-523/Reclaim_The_Records_-_Baltimore_City_Death_Certificates_-_msa_ce502_000388/"
+    );
+});
+
+
+test("CE502-523 and CE502-524 straddle the 388-523 / 524-600 chunk boundary correctly", () => {
+    assert.equal(
+        lookupSeries("CE502-523")[0].url,
+        "https://archive.org/details/reclaim-the-records-baltimore-city-death-certificates-msa-ce-502-000388-523/Reclaim_The_Records_-_Baltimore_City_Death_Certificates_-_msa_ce502_000523/"
+    );
+
+    assert.equal(
+        lookupSeries("CE502-524")[0].url,
+        "https://archive.org/details/reclaim-the-records-baltimore-city-death-certificates-msa-ce-502-000524-600/Reclaim_The_Records_-_Baltimore_City_Death_Certificates_-_msa_ce502_000524/"
+    );
+});
+
+
+test("CE502-600 is the last record, correctly in the 524-600 chunk", () => {
+    assert.equal(
+        lookupSeries("CE502-600")[0].url,
+        "https://archive.org/details/reclaim-the-records-baltimore-city-death-certificates-msa-ce-502-000524-600/Reclaim_The_Records_-_Baltimore_City_Death_Certificates_-_msa_ce502_000600/"
+    );
+});
+
+
+test("CE502 number 0 or past 600 returns no results", () => {
+    assert.deepEqual(lookupSeries("CE502-0"), []);
+    assert.deepEqual(lookupSeries("CE502-601"), []);
+});
+
+
+test("listSeries() reports CE502 with the year-only (month 0) date range, and full search support", () => {
+    const series = listSeries().find(s => s.name === "CE502");
+
+    assert.ok(series);
+    assert.equal(series.recordType, "death");
+    assert.equal(series.supportsLocationSearch, true);
+    assert.equal(series.supportsCertificateNumberSearch, true);
+    assert.deepEqual(series.dateRange, { startYear: 1950, startMonth: 0, endYear: 1972, endMonth: 0 });
     // No narrower certificateSearchRange was set - certificate search
     // covers the whole series, same as its dateRange.
-    assert.deepEqual(entry.certificateSearchRange, entry.dateRange);
+    assert.deepEqual(series.certificateSearchRange, series.dateRange);
+});
+
+
+test("CE502's dateRange (month 0 boundaries) correctly gates canHandle at both ends", () => {
+    assert.equal(ce502.canHandle("Baltimore City", 1, 1950), true);
+    assert.equal(ce502.canHandle("Baltimore City", 12, 1972), true);
+    assert.equal(ce502.canHandle("Baltimore City", 12, 1949), false);
+    assert.equal(ce502.canHandle("Baltimore City", 1, 1973), false);
 });
 
 
@@ -163,7 +221,7 @@ test("certificate search resets correctly at a year boundary", () => {
 });
 
 
-test("canHandle() rejects a county other than Baltimore City", () => {
+test("CE502 only handles Baltimore City", () => {
     assert.deepEqual(
         lookup({ location: "Anne Arundel", month: 1, year: 1950, recordType: "death" }).filter(r => r.series === "CE502"),
         []
