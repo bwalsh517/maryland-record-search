@@ -110,6 +110,32 @@ test("certificate search returns BOTH records for the confirmed duplicate 3000 i
 });
 
 
+test("certificate search returns just CE502-53 when the caller explicitly asks for the \"A\" duplicate", () => {
+    const results = lookupCertificate("1952-3000A", { recordType: "death" });
+
+    assert.equal(results.length, 1);
+    assert.equal(results[0].number, 53);
+    assert.equal(results[0].certificateNumber, "1952-3000A");
+    assert.equal(results[0].approximatePageUrl.endsWith("page/n0/mode/1up"), true);
+});
+
+
+test("certificate search with the letter suffix is case-insensitive", () => {
+    const upper = lookupCertificate("1952-3000A", { recordType: "death" });
+    const lower = lookupCertificate("1952-3000a", { recordType: "death" });
+
+    assert.deepEqual(upper, lower);
+});
+
+
+test("certificate search rejects a letter that doesn't match any known duplicate, rather than guessing", () => {
+    // Wrong letter on the real duplicate.
+    assert.deepEqual(ce502.lookupCertificateNumber("1952-3000B"), []);
+    // A letter on a number that has no duplicate at all.
+    assert.deepEqual(ce502.lookupCertificateNumber("1950-501A"), []);
+});
+
+
 test("certificate search correctly returns nothing for a certificate number that doesn't exist that year", () => {
     // 1950 tops out at 11327 (CE502-23).
     assert.deepEqual(lookupCertificate("1950-11328", { recordType: "death" }), []);

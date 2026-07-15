@@ -11,7 +11,9 @@
 //     the source to tell them apart) is the first of CE502-53. Modeled as
 //     two genuinely separate records whose ranges both contain 3000, so a
 //     certificate search for 1952-3000 correctly returns both rather than
-//     requiring the caller to know to type "3000A".
+//     requiring the caller to know to type "3000A" - but a caller who DOES
+//     know about the "A" can search "1952-3000A" to get just CE502-53
+//     (see certStartLetter below, and ce502.js's lookupCertificateNumber()).
 //   - CE502-126: source gave 1201-1598; the real end is 1600, confirmed
 //     directly - closes what would otherwise be an unexplained 2-number
 //     gap (1599-1600) before CE502-127 picks up at 1601.
@@ -81,7 +83,7 @@ if (typeof require !== "undefined") {
             { number: 50, year: 1952, startMonth: 2, endMonth: 2, certStart: 1501, certEnd: 2000 },
             { number: 51, year: 1952, startMonth: 2, endMonth: 3, certStart: 2001, certEnd: 2500 },
             { number: 52, year: 1952, startMonth: 3, endMonth: 3, certStart: 2501, certEnd: 3000 },
-            { number: 53, year: 1952, startMonth: 3, endMonth: 4, certStart: 3000, certEnd: 3500, certLabel: "Nos. 3000(A)-3500" },
+            { number: 53, year: 1952, startMonth: 3, endMonth: 4, certStart: 3000, certEnd: 3500, certLabel: "Nos. 3000(A)-3500", certStartLetter: "A" },
             { number: 54, year: 1952, startMonth: 4, endMonth: 4, certStart: 3501, certEnd: 4000 },
             { number: 55, year: 1952, startMonth: 4, endMonth: 5, certStart: 4001, certEnd: 4500 },
             { number: 56, year: 1952, startMonth: 5, endMonth: 5, certStart: 4501, certEnd: 5000 },

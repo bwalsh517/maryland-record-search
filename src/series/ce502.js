@@ -22,9 +22,17 @@ if (typeof require !== "undefined") {
         return `${start}-${end}`;
     }
 
+    /**
+     * Accepts an optional trailing letter (e.g. "1952-3000A"), which
+     * only means anything for a certificate number with a confirmed
+     * duplicate (currently just 1952's two certificates numbered
+     * 3000 - see ce502-data.js's certStartLetter). Letter is returned
+     * uppercased, or null if none was given; the caller (below)
+     * decides what a letter actually disambiguates.
+     */
     function parseYearCertificate(input) {
 
-        const match = String(input || "").trim().match(/^(\d{4})-(\d+)$/);
+        const match = String(input || "").trim().match(/^(\d{4})-(\d+)([A-Za-z]?)$/);
 
         if (!match) {
             return null;
@@ -32,12 +40,13 @@ if (typeof require !== "undefined") {
 
         const year = Number(match[1]);
         const cert = Number(match[2]);
+        const letter = match[3] ? match[3].toUpperCase() : null;
 
         if (cert < 1) {
             return null;
         }
 
-        return { year, cert };
+        return { year, cert, letter };
     }
 
 
@@ -126,13 +135,26 @@ if (typeof require !== "undefined") {
                 return [];
             }
 
-            const { year, cert } = parsed;
+            const { year, cert, letter } = parsed;
 
-            const matches = DATA.DATE_CERT_RECORDS.filter(record =>
+            let matches = DATA.DATE_CERT_RECORDS.filter(record =>
                 record.year === year &&
                 cert >= record.certStart &&
                 cert <= record.certEnd
             );
+
+            // A letter only means anything as a disambiguator for a
+            // confirmed duplicate-numbered certificate (certStartLetter
+            // set on the record it identifies) - "1952-3000A" narrows
+            // the two 1952-3000 matches down to just CE502-53.
+            // A number/letter combination that isn't a known duplicate
+            // (wrong letter, or a letter on a number with no duplicate
+            // at all) isn't guessed at - it just returns nothing.
+            if (letter) {
+                matches = matches.filter(record =>
+                    record.certStart === cert && record.certStartLetter === letter
+                );
+            }
 
             return matches.flatMap(record => {
 
@@ -154,7 +176,7 @@ if (typeof require !== "undefined") {
                         month: record.startMonth,
                         number: record.number,
                         label: `${formatRecordDateRange(record)} ${certLabel}`,
-                        certificateNumber: `${year}-${cert}`,
+                        certificateNumber: `${year}-${cert}${letter || ""}`,
                         url,
                         approximatePageUrl: `${url}page/n${page}/mode/1up`
                     })
