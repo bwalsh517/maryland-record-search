@@ -83,6 +83,21 @@ if (typeof require !== "undefined") {
             { number: 50, year: 1952, startMonth: 2, endMonth: 2, certStart: 1501, certEnd: 2000 },
             { number: 51, year: 1952, startMonth: 2, endMonth: 3, certStart: 2001, certEnd: 2500 },
             { number: 52, year: 1952, startMonth: 3, endMonth: 3, certStart: 2501, certEnd: 3000 },
+            // TODO: CE502-53's certStart carries a confirmed duplicate
+            // ("A") right at the boundary, so it's handled today (see
+            // ce502.js's lookupCertificateNumber() letter-suffix logic).
+            // If a FUTURE correction turns up a duplicate letter-suffix
+            // number in the MIDDLE of a record's range (e.g. "5012" and
+            // "5012A" both existing before "5013"), that's a different,
+            // harder problem: approximatePageUrl's page-jump math
+            // (position = cert - certStart) assumes exactly one
+            // certificate per number, so every genuine certificate after
+            // the inserted duplicate would page-jump one position short
+            // for the rest of that record. Not handled - no confirmed
+            // case of it exists yet, so this isn't guessed at. If one
+            // turns up, the fix needs an explicit per-record offset
+            // table (how many extra lettered certs precede a given
+            // position), not just a certStartLetter/certEndLetter field.
             { number: 53, year: 1952, startMonth: 3, endMonth: 4, certStart: 3000, certEnd: 3500, certLabel: "Nos. 3000(A)-3500", certStartLetter: "A" },
             { number: 54, year: 1952, startMonth: 4, endMonth: 4, certStart: 3501, certEnd: 4000 },
             { number: 55, year: 1952, startMonth: 4, endMonth: 5, certStart: 4001, certEnd: 4500 },
