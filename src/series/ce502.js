@@ -1,11 +1,45 @@
 if (typeof require !== "undefined") {
     require("../core/base-series.js");
+    require("./ce502-data.js");
 }
 
 (function (global) {
     "use strict";
 
     const BaseSeries = global.MDRecordSearch.BaseSeries;
+    const DATA = global.MDRecordSearch.CE502_DATA;
+
+    function formatRecordDateRange(record) {
+
+        const start = `${String(record.startMonth).padStart(2, "0")}/${record.year}`;
+
+        if (record.startMonth === record.endMonth) {
+            return start;
+        }
+
+        const end = `${String(record.endMonth).padStart(2, "0")}/${record.year}`;
+
+        return `${start}-${end}`;
+    }
+
+    function parseYearCertificate(input) {
+
+        const match = String(input || "").trim().match(/^(\d{4})-(\d+)$/);
+
+        if (!match) {
+            return null;
+        }
+
+        const year = Number(match[1]);
+        const cert = Number(match[2]);
+
+        if (cert < 1) {
+            return null;
+        }
+
+        return { year, cert };
+    }
+
 
     class CE502Series extends BaseSeries {
 
@@ -23,8 +57,7 @@ if (typeof require !== "undefined") {
             ];
         }
 
-        // NOTE: location/date search is not implemented for CE502 yet -
-        // only direct series-ID lookup works today.
+
         canHandle(location, month, year) {
 
             if (location !== "Baltimore City") {
@@ -32,6 +65,101 @@ if (typeof require !== "undefined") {
             }
 
             return this.inDateRange(month, year);
+        }
+
+
+        /**
+         * Every record is Baltimore City, so there's no jurisdiction
+         * dimension to filter on - just find every record whose date
+         * span covers the requested month/year. A record's label leads
+         * with its actual date span (e.g. "03/1952-04/1952"), same as
+         * CM1132, since a file often covers more than the single month
+         * that was searched for.
+         */
+        lookupLocationMonthYear(location, month, year) {
+
+            if (location !== "Baltimore City") {
+                return [];
+            }
+
+            const matches = DATA.DATE_CERT_RECORDS.filter(record =>
+                record.year === year &&
+                month >= record.startMonth &&
+                month <= record.endMonth
+            );
+
+            return matches.map(record => {
+
+                const certLabel = record.certLabel || `Nos. ${record.certStart}-${record.certEnd}`;
+
+                return this.createResult({
+                    location: "Baltimore City",
+                    year,
+                    month,
+                    number: record.number,
+                    label: `${formatRecordDateRange(record)} ${certLabel}`,
+                    url: this.archiveUrl(record.number)
+                });
+            });
+        }
+
+
+        /**
+         * Certificate numbers reset every year (format "YYYY-NNNNN",
+         * e.g. "1952-3000" - same convention as SE46's 1988-2014 era),
+         * not one continuous running sequence like CM1132. Implemented
+         * as a filter (every record whose range contains the number),
+         * not a find-first - this is what naturally returns BOTH
+         * CE502-52 and CE502-53 for "1952-3000" (see ce502-data.js's
+         * header comment on the confirmed duplicate 3000) without any
+         * special-casing here.
+         *
+         * Page-jump math matches SE46's pre-2002 (backs-scanned) era:
+         * certificates are on every other page, the first certificate
+         * in a record's range sits at page 0.
+         */
+        lookupCertificateNumber(input) {
+
+            const parsed = parseYearCertificate(input);
+
+            if (!parsed) {
+                return [];
+            }
+
+            const { year, cert } = parsed;
+
+            const matches = DATA.DATE_CERT_RECORDS.filter(record =>
+                record.year === year &&
+                cert >= record.certStart &&
+                cert <= record.certEnd
+            );
+
+            return matches.flatMap(record => {
+
+                const url = this.archiveUrl(record.number);
+
+                if (!url) {
+                    return [];
+                }
+
+                const position = cert - record.certStart;
+                const page = position * 2;
+
+                const certLabel = record.certLabel || `Nos. ${record.certStart}-${record.certEnd}`;
+
+                return [
+                    this.createResult({
+                        location: "Baltimore City",
+                        year,
+                        month: record.startMonth,
+                        number: record.number,
+                        label: `${formatRecordDateRange(record)} ${certLabel}`,
+                        certificateNumber: `${year}-${cert}`,
+                        url,
+                        approximatePageUrl: `${url}page/n${page}/mode/1up`
+                    })
+                ];
+            });
         }
 
     }

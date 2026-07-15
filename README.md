@@ -298,8 +298,8 @@ test/
 ## Adding a new series (including birth certificates)
 
 1. Copy an existing series file in `src/series/` as a starting point -
-   `ce502.js` is the simplest (series-ID lookup only), `se43.js` is the
-   most complete (also does location/date search, including
+   `cm1135.js` is the simplest (series-ID lookup only), `se43.js` is
+   the most complete (also does location/date search, including
    surname-range file splits).
 2. Extend `BaseSeries`, call `super(name, recordType)` - use `"birth"`
    for a birth certificate series.
@@ -344,10 +344,10 @@ just data, not something to try to generalize into a formula.
   null `url` rather than a broken or misleading link.
 
 - **CM1135** (birth, 1875-1972, Baltimore City only): series-ID search
-  only, same as CE502 - no location/date search implemented. Its
-  `dateRange` uses `startMonth: 0` and `endMonth: 0` since only years
-  were given, not specific months (see the `month: 0` convention
-  documented under `listSeries()` above).
+  only - no location/date search implemented. Its `dateRange` uses
+  `startMonth: 0` and `endMonth: 0` since only years were given, not
+  specific months (see the `month: 0` convention documented under
+  `listSeries()` above).
 
 - **S1963** (birth, Aug 1898 - Apr 1910): fully implemented location/date
   and series-ID search, including 11 known "no file" records (they
@@ -360,12 +360,29 @@ just data, not something to try to generalize into a formula.
   explicit override in `COLLECTION_OVERRIDES`; more can be added the
   same way if others turn up.
 
-- **CE502** supports series-ID lookup only - location/date search
-  returns no results (not a placeholder - a series with no
-  location/date search implemented just contributes nothing, the same
-  as a series that simply doesn't cover that county/date). Check
-  `listSeries()`'s `supportsLocationSearch` field before relying on a
-  series for location/date search.
+- **CE502** (death, Baltimore City, 1950-1972): fully implemented
+  location/date, series-ID, and certificate-number search. All 600
+  records (CE502-1 through CE502-600) are transcribed from the MSA
+  finding aid as an explicit per-record table (`DATE_CERT_RECORDS` in
+  `src/series/ce502-data.js`), each with a date span and a certificate
+  range whose numbering resets every January 1st - so certificate
+  search takes the same `"YYYY-NNNNN"` form as SE46's 1988-2014 era
+  (e.g. `"1952-3000"`), not a bare number. Fixed-size (~500 cert)
+  blocks mean records rarely land on calendar month boundaries, so a
+  date search often returns more than one overlapping record for a
+  single month - by design, not a data error (same principle as
+  CM1132's overlapping-month behavior above). `approximatePageUrl`
+  assumes 2 scanned pages per certificate with the first certificate
+  in a record's range at page 0 (backs were scanned, same convention
+  as SE46's pre-2002 era). Five transcription typos in the source
+  finding aid (each a certificate range starting one number too low)
+  and one confirmed pair of duplicate-numbered certificates in 1952
+  (both labeled "3000" in the source, one marked "A" to tell them
+  apart) were corrected after visual confirmation against the
+  original MSA index - see `ce502-data.js`'s header comment for the
+  full list. A certificate search for the duplicate (`"1952-3000"`)
+  correctly returns both records rather than requiring the caller to
+  know about the "A" suffix.
 - **SE46** (death, 1973-2014): location/date search covers the
   complete 1973-1987 grid with real county granularity, and falls back
   to every record for the year, statewide, for 1988-2014 - the source
