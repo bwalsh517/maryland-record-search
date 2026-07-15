@@ -19,6 +19,20 @@
   target the duplicate directly with its letter suffix
   (`"1952-3000A"`), returning just that one record instead of both.
 
+### Fixed
+
+- SE43: counties in a given month/year now switch correctly between
+  the two-letter code order (e.g. AA, AL, BA, CA...) and full-name
+  alphabetical order at the right boundaries (Jan 1916 and Jan 1945),
+  not just one fixed order for the whole series.
+- SE45: `ARCHIVE_RANGES` upper bound corrected from `7031` (a
+  copy-paste artifact from SE46's unrelated data) to `1037`, the
+  series' real highest generated number.
+- SE43: SE43-3223 through SE43-3452 (01/1922 Allegany through
+  10/1922 Worcester) now link to the MSA guide instead of archive.org
+  - the collection claims to cover 3223-3475, but scans for
+  3223-3452 specifically aren't actually there.
+
 ## 1.0.0
 
 First stable release.
