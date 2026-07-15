@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.1.0
 
 ### Added
 
@@ -13,9 +13,11 @@
   era (2 pages per certificate, first certificate at page 0). Five
   source-data typos and one confirmed pair of duplicate-numbered
   certificates (1952's two certificates both numbered "3000") were
-  corrected/modeled after visual confirmation against the original MSA
-  finding aid - see the README's "Known limitations" section and
-  `ce502-data.js`'s header comment.
+  corrected/modeled after visual confirmation against the MSA series
+  info - see the README's "Known limitations" section and
+  `ce502-data.js`'s header comment. A certificate search can also
+  target the duplicate directly with its letter suffix
+  (`"1952-3000A"`), returning just that one record instead of both.
 
 ## 1.0.0
 
@@ -33,7 +35,7 @@ First stable release.
   *and* certificate-number search, with an approximate deep link to
   the right page within a scanned item
 - CE502 (Baltimore City, 1950 - 1972) - series-ID search only at this
-  release (see "Unreleased" above for full location/date and
+  release (see 1.1.0 above for full location/date and
   certificate-number search, added since)
 
 **Birth certificates**
