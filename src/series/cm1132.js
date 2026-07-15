@@ -93,6 +93,13 @@ if (typeof require !== "undefined") {
                 244: "Not used - previously a duplicate entry"
             };
 
+            // CM1132-248 (09/1949-01/1950) is the real, complete end of
+            // this series - not a stopping point in unfinished work.
+            // From CM1132-249 on, Baltimore City death records continue
+            // under CE502 instead, so there is nothing further to add
+            // here; CE502 is the series that picks up where this one
+            // ends.
+            //
             // Per-record date range and certificate-number range,
             // transcribed from the MSA finding aid. Consecutive records'
             // date ranges deliberately overlap by one month (e.g. record

@@ -1,5 +1,38 @@
 # Changelog
 
+## 1.1.0
+
+### Added
+
+- CE502 (Baltimore City, 1950 - 1972) now has full location/date and
+  certificate-number search, in addition to series-ID lookup - all 600
+  records transcribed as an explicit per-record table
+  (`src/series/ce502-data.js`). Certificate numbers reset every year,
+  same `"YYYY-NNNNN"` convention as SE46's 1988-2014 era.
+  `approximatePageUrl` uses the same page-jump math as SE46's pre-2002
+  era (2 pages per certificate, first certificate at page 0). Five
+  source-data typos and one confirmed pair of duplicate-numbered
+  certificates (1952's two certificates both numbered "3000") were
+  corrected/modeled after visual confirmation against the MSA series
+  info - see the README's "Known limitations" section and
+  `ce502-data.js`'s header comment. A certificate search can also
+  target the duplicate directly with its letter suffix
+  (`"1952-3000A"`), returning just that one record instead of both.
+
+### Fixed
+
+- SE43: counties in a given month/year now switch correctly between
+  the two-letter code order (e.g. AA, AL, BA, CA...) and full-name
+  alphabetical order at the right boundaries (Jan 1916 and Jan 1945),
+  not just one fixed order for the whole series.
+- SE45: `ARCHIVE_RANGES` upper bound corrected from `7031` (a
+  copy-paste artifact from SE46's unrelated data) to `1037`, the
+  series' real highest generated number.
+- SE43: SE43-3223 through SE43-3452 (01/1922 Allegany through
+  10/1922 Worcester) now link to the MSA guide instead of archive.org
+  - the collection claims to cover 3223-3475, but scans for
+  3223-3452 specifically aren't actually there.
+
 ## 1.0.0
 
 First stable release.
@@ -15,7 +48,9 @@ First stable release.
 - CM1132 (Baltimore City, 1874 - 1950) - location/date, series-ID,
   *and* certificate-number search, with an approximate deep link to
   the right page within a scanned item
-- CE502 (Baltimore City, 1950 - 1972) - series-ID search only
+- CE502 (Baltimore City, 1950 - 1972) - series-ID search only at this
+  release (see 1.1.0 above for full location/date and
+  certificate-number search, added since)
 
 **Birth certificates**
 - S1963 (Aug 1898 - Apr 1910) - full location/date + series-ID search
