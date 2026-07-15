@@ -176,3 +176,10 @@ test("CM1132's dateRange reflects the real first and last record", () => {
     const series = listSeries().find(s => s.name === "CM1132");
     assert.deepEqual(series.dateRange, { startYear: 1874, startMonth: 12, endYear: 1950, endMonth: 1 });
 });
+
+test("lookupCertificate() returns no page link for CM1132-31 ( large file view issue, no page viewer)", () => {
+    const results = lookupCertificate("99000");
+
+    assert.equal(results[0].number, 31);
+    assert.equal(results[0].approximatePageUrl, null);
+});
