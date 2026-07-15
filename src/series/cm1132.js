@@ -17,7 +17,11 @@ if (typeof require !== "undefined") {
 
     function parseCertificateNumber(input) {
 
-        const raw = String(input || "").trim().toUpperCase();
+        const raw = String(input || "")
+            .trim()
+            .toUpperCase()
+            .replace(/^([A-G])-/, "$1");   // "A-1234" -> "A1234"; leaves "-1234" alone
+
         const match = raw.match(/^([A-G]?)(\d+)$/);
 
         if (!match) {
@@ -502,6 +506,13 @@ if (typeof require !== "undefined") {
             const position = linear - record.cert.startLinear + 1;
             const page = Math.max(1, position - 1);
 
+            // Record 31's collection isn't one continuous scan like every other
+            // record - it's split into several smaller files, each covering only
+            // a handful of certs, and we don't have which file a given certificate
+            // falls in. Archive.org also shows a "large file, click to view"
+            // prompt for oversized items instead of opening inline, so even a
+            // correct per-file page link wouldn't behave like the others. No
+            // approximate page url is possible with the data we have.
             return [
                 this.createResult({
                     number: record.number,
@@ -510,7 +521,10 @@ if (typeof require !== "undefined") {
                     label: record.cert.label,
                     certificateNumber: formatCertificateNumber(linear),
                     url,
-                    approximatePageUrl: `${url}page/n${page}/mode/1up`
+                    approximatePageUrl:
+                        record.number === 31
+                            ? null
+                            : `${url}page/n${page}/mode/1up`
                 })
             ];
         }
