@@ -166,8 +166,8 @@ test("listSeries() reports CM1132 with both location and certificate-number sear
 });
 
 
-test("listSeries() reports certificate-number search as false for every series except CM1132 and SE46", () => {
-    const series = listSeries().filter(s => s.name !== "CM1132" && s.name !== "SE46");
+test("listSeries() reports certificate-number search as false for every series except CM1132, SE46, and CE502", () => {
+    const series = listSeries().filter(s => s.name !== "CM1132" && s.name !== "SE46" && s.name !== "CE502");
     assert.ok(series.every(s => s.supportsCertificateNumberSearch === false));
 });
 
