@@ -1,5 +1,22 @@
 # Changelog
 
+## 1.1.1
+
+### Fixed
+
+- CM1132: certificate-number search now accepts a dash between the
+  letter block and the number (e.g. `"A-1234"` as well as `"A1234"`),
+  matching how the Baltimore County Genealogical Society index
+  sometimes formats them. A bare leading dash with no letter
+  (`"-1234"`) still returns no result rather than guessing which
+  mistake was made.
+- CM1132-31: `approximatePageUrl` no longer returns a malformed link.
+  That record's archive.org item has no trailing slash like every
+  other record's per-file sub-item, and the item itself is split into
+  several smaller files with no data yet mapping a certificate to the
+  right one - now returns `null` instead, consistent with how the
+  rest of the library signals no page link is available.
+
 ## 1.1.0
 
 ### Added
