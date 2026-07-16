@@ -206,6 +206,21 @@ if (typeof require !== "undefined") {
             }
 
             const number = Number(match[1]);
+
+            // Numbers outside [start, end] don't exist. A number inside
+            // the range but not otherwise handled (a series that
+            // doesn't have this record, an unimplemented range) still
+            // falls through to archiveUrl() below and returns [] there -
+            // this check exists just to catch numbers that were never
+            // valid in the first place, which some archiveUrl()
+            // overrides (SE44, S1963) don't reject on their own since
+            // they compute a URL from a formula rather than looking one
+            // up in a table.
+            if (this.seriesIdRange &&
+                (number < this.seriesIdRange.start || number > this.seriesIdRange.end)) {
+                return [];
+            }
+
             const url = this.archiveUrl(number);
 
             if (!url) {

@@ -17,6 +17,8 @@ if (typeof require !== "undefined") {
 
             this.dateRange = { startYear: 1951, startMonth: 7, endYear: 1969, endMonth: 6 };
 
+            this.seriesIdRange = { start: 1, end: 5021 };
+
             this.MONTH_EXCEPTION_SPLITS = {
                 "1954-12-Montgomery": ["A-J", "K-Z"],
                 "1955-02-Montgomery": ["A-Q", "R-Z"],

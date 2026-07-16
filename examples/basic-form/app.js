@@ -65,7 +65,7 @@ function renderSeriesInfo() {
 
         return `
             <div class="mdrs-series-row">
-                <span class="mdrs-series-name"><a href="${s.seriesHome}" target="_blank">${s.name}</a></span>
+                <span class="mdrs-series-name"><a href="${s.seriesHome}" target="_blank">${s.name}</a> (${s.seriesIdRange.end})</span>
                 <span class="mdrs-series-type">${s.recordType}</span>
                 <span class="mdrs-series-timeline">${formatDateRange(s.dateRange)}</span>
                 <span class="mdrs-series-support">${capabilities.join(" + ")}</span>

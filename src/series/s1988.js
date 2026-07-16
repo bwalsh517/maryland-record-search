@@ -17,6 +17,10 @@ if (typeof require !== "undefined") {
 
             this.dateRange = { startYear: 1910, startMonth: 5, endYear: 1913, endMonth: 12 };
 
+            // Same provisional-estimate caveat as ARCHIVE_RANGES' last
+            // entry below - not confirmed against the real final item.
+            this.seriesIdRange = { start: 1, end: 1012 };
+
             // The collection slug matches each range's starting number,
             // and the inherited buildArchiveUrl() formula builds each
             // URL from that directly - no override needed.

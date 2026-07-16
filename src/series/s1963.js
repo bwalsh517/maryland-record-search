@@ -17,6 +17,8 @@ if (typeof require !== "undefined") {
 
             this.dateRange = { startYear: 1898, startMonth: 8, endYear: 1910, endMonth: 4 };
 
+            this.seriesIdRange = { start: 1, end: 3265 };
+
             // S1963-1 through S1963-22 are a special early case, linked
             // directly via the MSA guide rather than archive.org - series-ID
             // lookup only, no county/month breakdown given.
