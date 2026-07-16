@@ -94,8 +94,9 @@ test("SE44-5021's URL falls in the 5001 block, matching the last generated recor
 // the table-based series (ARCHIVE_RANGES + findArchiveRange()), so it
 // has no bound of its own - seriesIdRange is what actually rejects a
 // number the series never generated (0, or anything past 5021).
-test("SE44 series-ID lookup rejects numbers past seriesIdRange", () => {
-    assert.equal(lookupSeries("SE44-0").length, 1);
+test("SE44 series-ID lookup rejects numbers outside seriesIdRange", () => {
+    assert.equal(lookupSeries("SE44-0").length, 0);
+    assert.equal(lookupSeries("SE44-1").length, 1);
     assert.equal(lookupSeries("SE44-5021").length, 1);
     assert.equal(lookupSeries("SE44-99999").length, 0);
 });

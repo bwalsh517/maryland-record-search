@@ -100,7 +100,8 @@ test("S1963 does not handle Baltimore City or dates outside Aug 1898 - Apr 1910"
 });
 
 
-test("S1963 series-ID lookup rejects numbers past seriesIdRange", () => {
+test("S1963 series-ID lookup rejects numbers outside seriesIdRange", () => {
+    assert.equal(lookupSeries("S1963-0").length, 0);
     assert.equal(lookupSeries("S1963-3265").length, 1);
     assert.equal(lookupSeries("S1963-99999").length, 0);
 });
