@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 /**
- * Bumps the version in package.json and src/core/namespace.js,
- * commits only those two files, and tags the repo.
+ * Bumps the version in package.json and src/core/namespace.js and
+ * commits only those two files.
  *
  * Refuses to run if there are uncommitted changes to any tracked
  * file - commit or stash those yourself first. Untracked files are
@@ -60,13 +60,6 @@ async function main() {
 
     if (!/^\d+\.\d+\.\d+$/.test(newVersion)) {
         fail(`"${newVersion}" doesn't look like a version number (expected e.g. 1.1.0).`);
-    }
-
-    const tagName = `v${newVersion}`;
-    const existingTags = runCapture("git tag --list").split("\n");
-
-    if (existingTags.includes(tagName)) {
-        fail(`Tag ${tagName} already exists.`);
     }
 
 
@@ -140,17 +133,16 @@ async function main() {
     // --- Run tests before committing anything ---
 
     console.log("Running tests...");
-    run("npm test");
+    run("node --test test/**/*.test.js");
 
 
-    // --- Commit only the two version files, then tag ---
+    // --- Commit the two version files ---
 
     run(`git add "${packageJsonPath}" "${namespacePath}"`);
     run(`git commit -m "Bump version to ${newVersion}"`);
-    run(`git tag "${tagName}"`);
 
-    console.log(`\nDone. Committed and tagged ${tagName}.`);
-    console.log("Push with: git push && git push --tags");
+    console.log(`\nDone. Committed the version bump to ${newVersion}.`);
+    console.log("Push with: git push");
 }
 
 
