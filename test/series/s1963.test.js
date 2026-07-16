@@ -100,10 +100,18 @@ test("S1963 does not handle Baltimore City or dates outside Aug 1898 - Apr 1910"
 });
 
 
+test("S1963 series-ID lookup rejects numbers outside seriesIdRange", () => {
+    assert.equal(lookupSeries("S1963-0").length, 0);
+    assert.equal(lookupSeries("S1963-3265").length, 1);
+    assert.equal(lookupSeries("S1963-99999").length, 0);
+});
+
+
 test("listSeries() reports S1963 as a birth series with location search implemented", () => {
     const series = listSeries().find(s => s.name === "S1963");
 
     assert.ok(series);
     assert.equal(series.recordType, "birth");
     assert.equal(series.supportsLocationSearch, true);
+    assert.deepEqual(series.seriesIdRange, { start: 1, end: 3265 });
 });

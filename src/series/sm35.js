@@ -15,6 +15,8 @@ if (typeof require !== "undefined") {
 
             this.dateRange = { startYear: 1914, startMonth: 1, endYear: 1951, endMonth: 12 };
 
+            this.seriesIdRange = { start: 1, end: 269 };
+
             // Full mapping transcribed from the MSA finding aid for this
             // series (SM35-1 through SM35-269, the entire series).
             // `sr` is the internal record number - it's used to build

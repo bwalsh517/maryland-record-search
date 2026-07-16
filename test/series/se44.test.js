@@ -90,19 +90,15 @@ test("SE44-5021's URL falls in the 5001 block, matching the last generated recor
     );
 });
 
-
-// KNOWN GAP, not a regression guard: unlike every table-based series
-// (which uses the shared ARCHIVE_RANGES + findArchiveRange() bounds
-// check), SE44 overrides archiveUrl() directly with a computed
-// formula that has no upper or lower bound at all. lookupSeries()
-// for a number the series never actually generated (0, or anything
-// past 5021) currently returns a plausible-looking URL instead of
-// [], unlike SE45/CE502/etc. This test documents today's real
-// behavior so a future fix shows up as an intentional, visible diff
-// here rather than a silent change.
-test("SE44 series-ID lookup has no bounds check (documents current behavior, not correctness)", () => {
-    assert.equal(lookupSeries("SE44-0").length, 1);
-    assert.equal(lookupSeries("SE44-99999").length, 1);
+// SE44 overrides archiveUrl() directly with a computed formula, unlike
+// the table-based series (ARCHIVE_RANGES + findArchiveRange()), so it
+// has no bound of its own - seriesIdRange is what actually rejects a
+// number the series never generated (0, or anything past 5021).
+test("SE44 series-ID lookup rejects numbers outside seriesIdRange", () => {
+    assert.equal(lookupSeries("SE44-0").length, 0);
+    assert.equal(lookupSeries("SE44-1").length, 1);
+    assert.equal(lookupSeries("SE44-5021").length, 1);
+    assert.equal(lookupSeries("SE44-99999").length, 0);
 });
 
 

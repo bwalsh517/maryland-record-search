@@ -73,6 +73,8 @@ if (typeof require !== "undefined") {
             // rough estimate like the original 1875-1949 guess.
             this.dateRange = { startYear: 1874, startMonth: 12, endYear: 1950, endMonth: 1 };
 
+            this.seriesIdRange = { start: 1, end: 248 };
+
             this.ARCHIVE_RANGES = [
                 { start: 1, end: 30, collection: "reclaim-the-records-baltimore-city-death-certificates-1875-1921-msa-cm-1132-00001-30", prefix: "Reclaim_The_Records_-_Baltimore_City_Death_Certificates_1875-1921_-_msa_cm1132_-_", padding: 5 },
                 { start: 31, end: 31, collection: "reclaim-the-records-baltimore-city-death-certificates-1875-1921-msa-cm-1132-0031", prefix: null, padding: null },

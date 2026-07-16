@@ -120,7 +120,7 @@
 
 .mdrs-series-row {
     display: grid;
-    grid-template-columns: 5rem 4rem 11rem 1fr;
+    grid-template-columns: 7rem 4rem 11rem 1fr;
     gap: .75rem;
     align-items: baseline;
 }

@@ -17,6 +17,8 @@ if (typeof require !== "undefined") {
             // 0 means "just a year" per BaseSeries.inDateRange().
             this.dateRange = { startYear: 1875, startMonth: 0, endYear: 1972, endMonth: 0 };
 
+            this.seriesIdRange = { start: 1, end: 670 };
+
             // Standard 50-file-per-collection range table, same shape
             // as CM1132/CE502 - no archiveUrl() override needed for
             // this portion.

@@ -247,7 +247,13 @@ if (typeof require !== "undefined") {
      * Introspection helper for integrators: what series are
      * registered, what record type and date range each covers, and
      * whether location/date search is actually implemented for it
-     * yet (vs. series-ID-only lookup). `dateRange` is the exact same
+     * yet (vs. series-ID-only lookup). `seriesIdRange` is the series'
+     * own SE43-N-style numbering, separate from `dateRange` (a date)
+     * and `certificateSearchRange` (a different numbering space for
+     * the few series with certificate numbers) - useful for telling
+     * "that number doesn't exist" apart from "that number exists but
+     * isn't covered by whatever search was attempted" when a lookup
+     * comes back empty. `dateRange` is the exact same
      * data each series' canHandle() uses (via inDateRange()) - not a
      * separately-maintained copy, so it can't disagree with actual
      * search behavior.
@@ -263,6 +269,7 @@ if (typeof require !== "undefined") {
                 recordType: series.seriesType,
                 seriesHome: series.seriesHome,
                 dateRange: series.dateRange,
+                seriesIdRange: series.seriesIdRange || null,
                 supportsLocationSearch:
                     series.lookupLocationMonthYear !== ns.BaseSeries.prototype.lookupLocationMonthYear,
                 supportsCertificateNumberSearch,

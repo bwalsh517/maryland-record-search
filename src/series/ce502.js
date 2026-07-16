@@ -58,6 +58,8 @@ if (typeof require !== "undefined") {
 
             this.dateRange = { startYear: 1950, startMonth: 0, endYear: 1972, endMonth: 0 };
 
+            this.seriesIdRange = { start: 1, end: 600 };
+
             this.ARCHIVE_RANGES = [
                 { start: 1, end: 94, collection: "reclaim-the-records-baltimore-city-death-certificates-msa-ce-502-000001-94", prefix: "Reclaim_The_Records_-_Baltimore_City_Death_Certificates_-_msa_ce502_", padding: 6 },
                 { start: 95, end: 387, collection: "reclaim-the-records-baltimore-city-death-certificates-msa-ce-502-000095-387", prefix: "Reclaim_The_Records_-_Baltimore_City_Death_Certificates_-_msa_ce502_", padding: 6 },

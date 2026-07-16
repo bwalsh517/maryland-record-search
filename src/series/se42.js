@@ -17,6 +17,8 @@ if (typeof require !== "undefined") {
 
             this.dateRange = { startYear: 1898, startMonth: 5, endYear: 1910, endMonth: 4 };
 
+            this.seriesIdRange = { start: 1, end: 3298 };
+
             this.ARCHIVE_RANGES = [
                 { start: 1, end: 47, collection: "reclaim-the-records-maryland-death-certificates-1898-1910-msa-se-42-001-47", prefix: "Reclaim_The_Records_-_Maryland_Death_Certificates_1898-1910_-_msa_se42_-_", padding: 5 },
                 { start: 49, end: 498, collection: "reclaim-the-records-maryland-death-certificates-1898-1910-msa-se-42-049-500", prefix: "Reclaim_The_Records_-_Maryland_Death_Certificates_1898-1910_-_msa_se42_-_", padding: 5 },

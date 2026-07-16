@@ -113,6 +113,11 @@ if (typeof require !== "undefined") {
 
             this.dateRange = { startYear: 1973, startMonth: 0, endYear: 2014, endMonth: 0 };
 
+            // Covers the full series including 7032-7215 (2013-2014),
+            // which is MSA-guide-only and past ARCHIVE_RANGES' own end
+            // of 7031 - see lookupSeries() below.
+            this.seriesIdRange = { start: 1, end: 7215 };
+
             // Certificate search covers 1988-2014, not the whole
             // series - see lookupCertificateNumber() below (no
             // location dimension exists after 1987 at all, and
