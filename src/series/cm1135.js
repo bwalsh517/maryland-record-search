@@ -21,17 +21,15 @@ if (typeof require !== "undefined") {
 
             // Standard 50-file-per-collection range table, same shape
             // as CM1132/CE502 - no archiveUrl() override needed for
-            // this portion.
+            // this portion. CM1135-151 through CM1135-670 have no
+            // archive.org scan at all, so BaseSeries.archiveUrl()'s
+            // default MSA fallback handles them automatically - nothing
+            // else to declare here.
             this.ARCHIVE_RANGES = [
                 { start: 1, end: 50, collection: "reclaim-the-records-baltimore-maryland-birth-certificates-1875-1922-cm-1135-001", prefix: "Reclaim_The_Records_-_Baltimore_Maryland_Birth_Certificates_-_1875-1922_-_CM1135-", padding: 3 },
                 { start: 51, end: 100, collection: "reclaim-the-records-baltimore-maryland-birth-certificates-1875-1922-cm-1135-051", prefix: "Reclaim_The_Records_-_Baltimore_Maryland_Birth_Certificates_-_1875-1922_-_CM1135-", padding: 3 },
                 { start: 101, end: 150, collection: "reclaim-the-records-baltimore-maryland-birth-certificates-1875-1922-cm-1135-101", prefix: "Reclaim_The_Records_-_Baltimore_Maryland_Birth_Certificates_-_1875-1922_-_CM1135-", padding: 3 }
             ];
-
-            // CM1135-151 through CM1135-670 are hosted on the MSA guide
-            // instead of archive.org and follow a simple formula - see
-            // archiveUrl() override below.
-            this.MSA_GUIDE_RANGE = { start: 151, end: 670 };
         }
 
 
@@ -42,18 +40,6 @@ if (typeof require !== "undefined") {
             }
 
             return this.inDateRange(month, year);
-        }
-
-
-        archiveUrl(number) {
-
-            const { start, end } = this.MSA_GUIDE_RANGE;
-
-            if (number >= start && number <= end) {
-                return `https://guide.msa.maryland.gov/pages/item.aspx?ID=CM1135-${number}`;
-            }
-
-            return super.archiveUrl(number);
         }
 
     }

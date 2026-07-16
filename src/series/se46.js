@@ -38,11 +38,11 @@ if (typeof require !== "undefined") {
     }
 
     // 2013-2014 (SE46-7032 to SE46-7215) were never uploaded to
-    // archive.org - the MSA guide entry is the only link there is.
-    function msaGuideUrl(number) {
-        return `https://guide.msa.maryland.gov/pages/item.aspx?ID=SE46-${number}`;
-    }
-
+    // archive.org - BaseSeries.archiveUrl()'s default MSA fallback
+    // handles the URL itself with no override needed here.
+    // isMsaGuideOnly() is still needed separately, to skip
+    // approximatePageUrl's page-jump math below, which doesn't apply to
+    // an MSA-only link.
     function isMsaGuideOnly(number) {
         return number >= 7032 && number <= 7215;
     }
@@ -202,7 +202,7 @@ if (typeof require !== "undefined") {
                             year,
                             number: record.number,
                             label: `Nos. ${record.certStart}-${record.certEnd} (statewide, not narrowed by county)`,
-                            url: isMsaGuideOnly(record.number) ? msaGuideUrl(record.number) : this.archiveUrl(record.number)
+                            url: this.archiveUrl(record.number)
                         })
                     );
                 }
@@ -394,7 +394,7 @@ if (typeof require !== "undefined") {
                         number: record.number,
                         label: `Nos. ${record.certStart}-${record.certEnd}`,
                         certificateNumber: `${year}-${cert}`,
-                        url: msaGuideUrl(record.number)
+                        url: this.archiveUrl(record.number)
                     })
                 ];
             }
@@ -467,18 +467,12 @@ if (typeof require !== "undefined") {
             }
 
             // 2013-2014 (SE46-7032 to SE46-7215) were never uploaded
-            // to archive.org - the MSA guide entry is the only link
-            // there is. MSA may add these in the future; whatever the
-            // guide page itself says about availability is accurate,
-            // this library doesn't add its own commentary on top.
-            if (isMsaGuideOnly(number)) {
-                return [
-                    this.createResult({
-                        number,
-                        url: msaGuideUrl(number)
-                    })
-                ];
-            }
+            // to archive.org - falls through to super.lookupSeries()
+            // below, which resolves to the same MSA guide link via
+            // BaseSeries.archiveUrl()'s default fallback. MSA may add
+            // real scans in the future; whatever the guide page itself
+            // says about availability is accurate, this library doesn't
+            // add its own commentary on top.
 
             if (this.decemberWorcesterNumbers.has(number)) {
 
