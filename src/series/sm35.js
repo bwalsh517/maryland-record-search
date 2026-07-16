@@ -306,17 +306,14 @@ if (typeof require !== "undefined") {
                 this.recordsByNumber[record.number] = record;
             }
 
-            // SM35-73 through SM35-269 are hosted on the MSA guide
-            // instead of archive.org (some viewable there, some
-            // restricted for 100 years from filing - same URL either
-            // way) and follow a simple, confirmed formula, regardless of
-            // their sr value in RECORDS above. SM35-269 is the last file
-            // in the series (1914-1951). Their year/county coverage IS
-            // now known (RECORDS above covers the whole series), so
-            // they're included in buildIndex()'s year search same as
-            // 1-72 - this range only controls which URL format
-            // archiveUrl() uses.
-            this.MSA_GUIDE_RANGE = { start: 73, end: 269 };
+            // SM35-1 through SM35-72 have real archive.org scans,
+            // addressed by each record's own `sr` value rather than a
+            // shared collection/prefix table (see RECORDS above) - all
+            // 269 records have an sr value, but it's only meaningful for
+            // building a URL within this range (see archiveUrl() below).
+            // 73-269 have no archive.org scan at all; BaseSeries.
+            // archiveUrl()'s default MSA fallback handles them.
+            this.ARCHIVE_SR_RANGE = { start: 1, end: 72 };
         }
 
 
@@ -393,32 +390,25 @@ if (typeof require !== "undefined") {
         }
 
 
-        // Full override, not buildArchiveUrl/ARCHIVE_RANGES - two
-        // completely different URL shapes depending on the number
-        // (archive.org using the record's sr value vs. a direct MSA
-        // guide link), neither of which fits the standard range-table
-        // pattern used by every other series.
+        // Full override, not buildArchiveUrl/ARCHIVE_RANGES - the
+        // sr-based archive.org URL for 1-72 doesn't fit the shared
+        // collection/prefix range-table shape used by other series.
         archiveUrl(number) {
 
-            const { start, end } = this.MSA_GUIDE_RANGE;
-
-            if (number >= start && number <= end) {
-                return `https://guide.msa.maryland.gov/pages/item.aspx?ID=SM35-${number}`;
-            }
-
+            const { start, end } = this.ARCHIVE_SR_RANGE;
             const record = this.recordsByNumber[number];
 
-            if (!record) {
-                return null;
+            if (record && number >= start && number <= end) {
+                return (
+                    "https://archive.org/details/" +
+                    `reclaim-the-records-maryland-birth-certificates-1914-1922-sm-35-${number}` +
+                    "/" +
+                    `Reclaim_The_Records_-_Maryland_Birth_Certificates_-_1914-1922_-_SM35-sr${record.sr}` +
+                    "/"
+                );
             }
 
-            return (
-                "https://archive.org/details/" +
-                `reclaim-the-records-maryland-birth-certificates-1914-1922-sm-35-${number}` +
-                "/" +
-                `Reclaim_The_Records_-_Maryland_Birth_Certificates_-_1914-1922_-_SM35-sr${record.sr}` +
-                "/"
-            );
+            return super.archiveUrl(number);
         }
 
     }

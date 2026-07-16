@@ -167,17 +167,19 @@ if (typeof require !== "undefined") {
         }
 
 
-        // Full override, not buildArchiveUrl/ARCHIVE_RANGES - the
-        // leading special block uses the MSA guide, no-file numbers
-        // have no URL at all, and the regular range doesn't fit the
-        // shared-collection range-table shape (each record appears to
-        // get its own archive.org item, like S1988).
+        // Full override, not buildArchiveUrl/ARCHIVE_RANGES - no-file
+        // numbers have no URL at all, and the regular range doesn't fit
+        // the shared-collection range-table shape (each record appears
+        // to get its own archive.org item, like S1988).
         archiveUrl(number) {
 
             const { start, end } = this.LEADING_SPECIAL_RANGE;
 
+            // No archive.org scan exists for this early block - defer
+            // to BaseSeries.archiveUrl()'s default MSA fallback rather
+            // than hand-building the same link here.
             if (number >= start && number <= end) {
-                return `https://guide.msa.maryland.gov/pages/item.aspx?ID=S1963-${number}`;
+                return super.archiveUrl(number);
             }
 
             if (this.NO_FILE_RECORDS[number]) {

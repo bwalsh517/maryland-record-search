@@ -24,7 +24,17 @@ if (typeof require !== "undefined") {
                 { start: 737, end: 1564, collection: "reclaim-the-records-maryland-death-certificates-1910-1921-msa-se-43-737-1564", prefix: "Reclaim_The_Records_-_Maryland_Death_Certificates_1910-1921_-_msa_se43_-_", padding: 5 },
                 { start: 1565, end: 2394, collection: "reclaim-the-records-maryland-death-certificates-1910-1921-msa-se-43-1565-2394", prefix: "Reclaim_The_Records_-_Maryland_Death_Certificates_1910-1921_-_msa_se43_-_", padding: 5 },
                 { start: 2395, end: 3222, collection: "reclaim-the-records-maryland-death-certificates-1910-1921-msa-se-43-2395-3222", prefix: "Reclaim_The_Records_-_Maryland_Death_Certificates_1910-1921_-_msa_se43_-_", padding: 5 },
-                { start: 3223, end: 3475, collection: "reclaim-the-records-maryland-death-certificates-1910-1922-msa-se-43-3223-3475", prefix: "Reclaim_The_Records_-_Maryland_Death_Certificates_1910-1922_-_msa_se43_-_", padding: 5 },
+                // This bundle's collection name advertises 3223-3475,
+                // but scans for 3223-3452 (Jan-Oct 1922) are actually
+                // missing from it - confirmed directly against the real
+                // archive.org contents, not assumed from the bundle's
+                // own advertised name (the same kind of trap that caused
+                // SE45's ARCHIVE_RANGES bug). Only the true range
+                // (3453-3475, Nov-Dec 1922, which do have real scans) is
+                // declared here - BaseSeries.archiveUrl()'s default MSA
+                // fallback correctly handles 3223-3452 with no override
+                // needed, since this entry no longer claims to cover it.
+                { start: 3453, end: 3475, collection: "reclaim-the-records-maryland-death-certificates-1910-1922-msa-se-43-3223-3475", prefix: "Reclaim_The_Records_-_Maryland_Death_Certificates_1910-1922_-_msa_se43_-_", padding: 5 },
                 { start: 3476, end: 3807, collection: "reclaim-the-records-maryland-death-certificates-msa-se-43-003476-3807", prefix: "Reclaim_The_Records_-_Maryland_Death_Certificates_-_msa_se43_", padding: 6 },
                 { start: 3808, end: 3986, collection: "reclaim-the-records-maryland-death-certificates-msa-se-43-003808-3986", prefix: "Reclaim_The_Records_-_Maryland_Death_Certificates_-_msa_se43_", padding: 6 },
                 { start: 3987, end: 4848, collection: "reclaim-the-records-maryland-death-certificates-msa-se-43-003808-4848", prefix: "Reclaim_The_Records_-_Maryland_Death_Certificates_-_msa_se43_", padding: 6 },
@@ -296,27 +306,6 @@ if (typeof require !== "undefined") {
             }
 
             return this.inDateRange(month, year);
-        }
-
-
-        // SE43-3223 through SE43-3452 (Jan 1922 - Oct 1922) link to the
-        // MSA guide's per-item page instead of archive.org. These
-        // numbers fall within the archive.org bundle named
-        // "3223-3475", but scans for 3223-3452 specifically are
-        // missing from that bundle - confirmed directly against the
-        // real archive.org contents, not assumed from the bundle's own
-        // advertised name (3223-3475 is what the collection claims to
-        // cover, not proof of what's actually in it - the same kind of
-        // trap that caused SE45's ARCHIVE_RANGES bug). SE43-3453
-        // through SE43-3475 (Nov-Dec 1922) do have real scans and still
-        // resolve normally below.
-        archiveUrl(number) {
-
-            if (number >= 3223 && number <= 3452) {
-                return `https://guide.msa.maryland.gov/pages/item.aspx?ID=SE43-${number}`;
-            }
-
-            return super.archiveUrl(number);
         }
 
 
