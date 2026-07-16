@@ -1,0 +1,39 @@
+name: Expire stale deploy tag
+
+on:
+  schedule:
+    - cron: "0 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  expire:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Delete deploy tag if its commit is older than the limit
+        env:
+          MAX_AGE_HOURS: 24
+        run: |
+          if ! git rev-parse -q --verify refs/tags/deploy >/dev/null; then
+            echo "No deploy tag - nothing to do"
+            exit 0
+          fi
+
+          COMMIT_DATE=$(git log -1 --format=%ct refs/tags/deploy)
+          NOW=$(date +%s)
+          AGE_HOURS=$(( (NOW - COMMIT_DATE) / 3600 ))
+
+          echo "deploy's commit is ${AGE_HOURS}h old (limit: ${MAX_AGE_HOURS}h)"
+
+          if [ "$AGE_HOURS" -ge "$MAX_AGE_HOURS" ]; then
+            git push origin :refs/tags/deploy
+            echo "Deleted stale deploy tag - deploy-pages.yml's delete trigger will redeploy main"
+          fi

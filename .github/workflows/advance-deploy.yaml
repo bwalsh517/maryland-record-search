@@ -1,0 +1,31 @@
+name: Advance deploy tag on develop
+
+on:
+  push:
+    branches: [develop]
+
+permissions:
+  contents: write
+
+jobs:
+  advance-tag:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Move deploy tag to develop's new tip, only if it already exists
+        run: |
+          # Never creates the tag - only advances it if someone already
+          # opted into preview mode by creating it themselves. Pushing
+          # the moved tag triggers deploy-pages.yml's own tag trigger,
+          # so this alone causes a redeploy - no separate step needed.
+          if git ls-remote --exit-code --tags origin refs/tags/deploy >/dev/null 2>&1; then
+            git tag -f deploy "$GITHUB_SHA"
+            git push origin deploy --force
+            echo "Moved deploy tag to $GITHUB_SHA"
+          else
+            echo "deploy tag does not exist - leaving main as the live default"
+          fi

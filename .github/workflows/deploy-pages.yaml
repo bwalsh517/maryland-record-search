@@ -1,0 +1,70 @@
+name: Deploy Pages
+
+on:
+  push:
+    branches: [main]
+    tags: [deploy]
+  delete:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    if: github.event_name != 'delete' || (github.event.ref_type == 'tag' && github.event.ref == 'deploy')
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          fetch-tags: true
+
+      - name: Resolve which commit to deploy
+        run: |
+          if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/tags/deploy" ]]; then
+            # deploy tag was pushed/moved directly - deploy what it points to
+            TARGET=$(git rev-parse refs/tags/deploy)
+            echo "Deploying from deploy tag ($TARGET)"
+          else
+            # main was pushed, or the deploy tag was just deleted by
+            # hand - main always wins either way. Any leftover deploy
+            # tag is cleared too, so a stray tag can't linger and
+            # silently override a later main push.
+            TARGET=$(git rev-parse origin/main)
+            if git ls-remote --exit-code --tags origin refs/tags/deploy >/dev/null 2>&1; then
+              git push origin :refs/tags/deploy
+              echo "Deleted deploy tag - main takes over"
+            fi
+            echo "Deploying from main ($TARGET)"
+          fi
+          git checkout "$TARGET"
+
+      - name: Stamp version with git describe
+        run: |
+          # git describe against real vX.Y.Z tags reflects actual
+          # drift since the last release - exactly "v1.1.2" if this
+          # commit IS that release, or "v1.1.2-3-gabc1234" if main/the
+          # deploy tag has moved 3 commits past it. package.json's
+          # version alone can't show that, since it only changes on an
+          # actual release bump.
+          DESCRIBED=$(git describe --tags)
+          sed -i "s/global.MDRecordSearch.VERSION = \".*\";/global.MDRecordSearch.VERSION = \"${DESCRIBED}\";/" src/core/namespace.js
+          echo "Stamped version: ${DESCRIBED}"
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - id: deployment
+        uses: actions/deploy-pages@v4
