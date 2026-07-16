@@ -290,6 +290,20 @@ if (typeof require !== "undefined") {
                         number === segment.start ? segment.startSuffix :
                             number === segment.end ? segment.endSuffix : null;
 
+                    // Same page-jump math as CM1132: one certificate per
+                    // scanned page, first certificate in the range lands
+                    // on page 1 (position 1, minus 1, floored at 1 - see
+                    // CM1132's own lookupCertificateNumber() for why the
+                    // floor exists). Only meaningful when this record has
+                    // a real archive.org scan (findArchiveRange() is the
+                    // same check BaseSeries.archiveUrl() uses internally
+                    // to decide between a scan link and the MSA guide
+                    // fallback) - CM1135-151 onward has no scan to jump
+                    // into, so no page link is possible there regardless
+                    // of the certificate number searched for.
+                    const position = number - segment.start + 1;
+                    const page = Math.max(1, position - 1);
+
                     results.push(this.createResult({
                         location: "Baltimore City",
                         year: matchedPart.date.startYear,
@@ -303,10 +317,9 @@ if (typeof require !== "undefined") {
                                 : record.label,
                         certificateNumber: `${segment.letter}${number}${boundarySuffix || ""}`,
                         url,
-                        // Page-jump math (a la CM1132/CE502) hasn't been confirmed
-                        // for this series - deliberately left unset rather than
-                        // guessing at a certs-per-page ratio.
-                        approximatePageUrl: null
+                        approximatePageUrl: this.findArchiveRange(record.number)
+                            ? `${url}page/n${page}/mode/1up`
+                            : null
                     }));
 
                     break;
