@@ -130,7 +130,7 @@ if (typeof require !== "undefined") {
 
             this.YEAR_EXCEPTION_SPECIAL = {
                 "1928-Garrett": [
-                    { se43: 9679, label: "" }
+                    { number: 9679, label: "" }
                 ]
             };
         }
@@ -190,7 +190,7 @@ if (typeof require !== "undefined") {
                 const [specialYear, county] = key.split("-");
 
                 for (const record of this.YEAR_EXCEPTION_SPECIAL[key]) {
-                    this.addYearRecord(index, Number(specialYear), county, record.se43, record.label);
+                    this.addYearRecord(index, Number(specialYear), county, record.number, record.label);
                 }
             }
 
@@ -223,7 +223,7 @@ if (typeof require !== "undefined") {
         }
 
 
-        addRecord(index, year, month, county, se43, label, periodType) {
+        addRecord(index, year, month, county, number, label, periodType) {
 
             const key = `${year}-${month}-${county}`;
 
@@ -231,7 +231,7 @@ if (typeof require !== "undefined") {
                 index[key] = [];
             }
 
-            index[key].push({ se43, label, periodType });
+            index[key].push({ number, label, periodType });
         }
 
 
@@ -334,9 +334,9 @@ if (typeof require !== "undefined") {
                     location: county,
                     year,
                     month: record.periodType === "year" ? null : month,
-                    number: record.se43,
+                    number: record.number,
                     label: record.label || "",
-                    url: this.archiveUrl(record.se43)
+                    url: this.archiveUrl(record.number)
                 })
             );
         }
