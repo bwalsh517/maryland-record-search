@@ -19,7 +19,9 @@ if (typeof require !== "undefined") {
      *     of sync with what canHandle() actually does.
      *   - canHandle(location, month, year) -> boolean
      *   - ARCHIVE_RANGES (if using the default table-based archiveUrl),
-     *     OR override archiveUrl(number) directly
+     *     OR override archiveUrl(number) directly - a series needs
+     *     neither if it has nothing better than the default MSA guide
+     *     fallback to offer (see archiveUrl() below)
      *   - buildIndex() + lookupLocationMonthYear(location, month, year),
      *     if the series supports location/date search (some only
      *     support direct series-ID lookup for now)
@@ -127,15 +129,43 @@ if (typeof require !== "undefined") {
         }
 
 
+        /**
+         * Every MSA-confirmed series number has a details page at this
+         * URL, whether or not a real scan exists there (MSA still shows
+         * a page saying so). Shared by archiveUrl()'s default fallback
+         * below and by any series that needs to build one directly
+         * (SE43's confirmed-missing-scan gap, SE46's 2013-2014 tail,
+         * etc.) instead of duplicating the template.
+         */
+        msaItemUrl(number) {
+            return `https://guide.msa.maryland.gov/pages/item.aspx?ID=${this.name}-${number}`;
+        }
+
+
+        /**
+         * Falls back to the MSA guide page once nothing more specific
+         * (ARCHIVE_RANGES, or a subclass's own override) has an answer -
+         * seriesIdRange is sourced directly from MSA's own numbering, so
+         * every number inside it has a real details page there, even if
+         * this library has no scan link for it yet. A subclass only
+         * needs to write code here when it has something better than
+         * the MSA page to offer for part of its range; everything else
+         * is free.
+         */
         archiveUrl(number) {
 
             const range = this.findArchiveRange(number);
 
-            if (!range) {
-                return null;
+            if (range) {
+                return this.buildArchiveUrl(range, number);
             }
 
-            return this.buildArchiveUrl(range, number);
+            if (this.seriesIdRange &&
+                number >= this.seriesIdRange.start && number <= this.seriesIdRange.end) {
+                return this.msaItemUrl(number);
+            }
+
+            return null;
         }
 
 
@@ -234,6 +264,20 @@ if (typeof require !== "undefined") {
 
 
         createResult(fields = {}) {
+
+            const number = fields.number ?? null;
+
+            // Always the MSA details page for this number, regardless of
+            // what url ends up being (a real scan, an MSA link too, or
+            // null for a confirmed no-file record) - a separate, always-
+            // present pointer to "MSA's own page for this", useful even
+            // when a scan link is also present since MSA may document
+            // things this library doesn't.
+            const msaGuideUrl = (number !== null && this.seriesIdRange &&
+                number >= this.seriesIdRange.start && number <= this.seriesIdRange.end)
+                ? this.msaItemUrl(number)
+                : null;
+
             return {
                 series: this.name,
                 seriesType: this.seriesType,
@@ -246,6 +290,7 @@ if (typeof require !== "undefined") {
                 number: null,
                 label: "",
                 url: null,
+                msaGuideUrl,
 
                 // Only set by series that support certificate-number
                 // lookup (see lookupCertificateNumber() above) - an
