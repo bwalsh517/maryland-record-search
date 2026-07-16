@@ -58,16 +58,19 @@ jobs:
           # - deploy points at exactly this commit by definition when
           # it's the trigger, so without excluding it, git describe
           # finds it first instead of the real release tag.
-          #
+          DESCRIBED=$(git describe --tags --exclude='deploy')
+          # Strip the tag's own v prefix - VERSION has never carried
+          # one (package.json's version is bare "1.1.2"), and app.js
+          # already prepends its own "v" when displaying it.
+          DESCRIBED="${DESCRIBED#v}"
+
           # When deployed via the deploy tag, the +deploy marker is
           # inserted so it's visually distinct from an ordinary main
-          # deploy at a glance: v1.1.2+deploy-2-abc123 (deploy tag,
-          # 2 commits past the release) vs. v1.1.2-4-gabc123 (main,
+          # deploy at a glance: 1.1.2+deploy-2-abc123 (deploy tag,
+          # 2 commits past the release) vs. 1.1.2-4-gabc123 (main,
           # 4 commits past the release).
-          DESCRIBED=$(git describe --tags --exclude='deploy')
-
           if [[ "${{ steps.resolve.outputs.via }}" == "deploy" ]]; then
-            if [[ "$DESCRIBED" =~ ^(v[0-9]+\.[0-9]+\.[0-9]+)-([0-9]+)-g([0-9a-f]+)$ ]]; then
+            if [[ "$DESCRIBED" =~ ^([0-9]+\.[0-9]+\.[0-9]+)-([0-9]+)-g([0-9a-f]+)$ ]]; then
               STAMPED="${BASH_REMATCH[1]}+deploy-${BASH_REMATCH[2]}-${BASH_REMATCH[3]}"
             else
               STAMPED="${DESCRIBED}+deploy"
