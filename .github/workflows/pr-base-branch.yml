@@ -1,0 +1,35 @@
+name: PR base branch
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+    branches: [main]
+
+jobs:
+  base-branch:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check that main is only targeted from develop or a hotfix/ branch
+        env:
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+        run: |
+          # Regular feature/bugfix work goes through develop first (see
+          # commit-message-standard.md). The one exception is an urgent
+          # fix branched directly off main - marked by a hotfix/ prefix
+          # so this check can tell it apart from "base left as main by
+          # mistake" without guessing.
+          if [[ "$HEAD_REF" == "develop" || "$HEAD_REF" == hotfix/* ]]; then
+            echo "OK: $HEAD_REF -> main"
+          else
+            echo "PR targets main from '$HEAD_REF', which isn't develop or a hotfix/ branch"
+            echo ""
+            echo "If this is regular feature/bugfix work, change the base"
+            echo "branch to develop instead."
+            echo ""
+            echo "If this is an urgent fix that needs to land on main"
+            echo "directly, rename the branch to start with hotfix/ (see"
+            echo "commit-message-standard.md's \"Bugfixes that need to"
+            echo "land on main immediately\" section)."
+            exit 1
+          fi
