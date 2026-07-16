@@ -15,34 +15,21 @@ const SE46_DATA = require("../../src/series/se46-data.js");
  * whether it builds a location/date index or not:
  *
  *  - buildIndex()-based series: walk this.index and take the max of
- *    whichever field holds the record number. Field name isn't
- *    consistent across series (SE43 uses "se43", SE45 uses "se45",
- *    everything else uses "number") - RECORD_NUMBER_FIELD spells that
- *    out per series rather than guessing.
+ *    the "number" field every series' pushed records use.
  *
  *  - series-ID-only series (no buildIndex): there's no index to walk,
  *    so the real bound is whatever ARCHIVE_RANGES/MSA_GUIDE_RANGE
  *    already declares. These entries just confirm seriesIdRange
  *    agrees with that other table, not a second independent source.
  */
-const RECORD_NUMBER_FIELD = {
-    SE42: "number",
-    SE43: "se43",
-    SE44: "number",
-    SE45: "se45",
-    S1988: "number",
-    SM35: "number",
-    S1963: "number"
-};
-
-function maxFromIndex(series, field) {
+function maxFromIndex(series) {
 
     let max = -Infinity;
 
     for (const key of Object.keys(series.index)) {
         for (const record of series.index[key]) {
-            if (record[field] > max) {
-                max = record[field];
+            if (record.number > max) {
+                max = record.number;
             }
         }
     }
@@ -63,25 +50,25 @@ for (const series of SERIES) {
 
 test("SE42 seriesIdRange.end matches its computed index", () => {
     const series = SERIES.find(s => s.name === "SE42");
-    assert.equal(series.seriesIdRange.end, maxFromIndex(series, RECORD_NUMBER_FIELD.SE42));
+    assert.equal(series.seriesIdRange.end, maxFromIndex(series));
 });
 
 
 test("SE43 seriesIdRange.end matches its computed index", () => {
     const series = SERIES.find(s => s.name === "SE43");
-    assert.equal(series.seriesIdRange.end, maxFromIndex(series, RECORD_NUMBER_FIELD.SE43));
+    assert.equal(series.seriesIdRange.end, maxFromIndex(series));
 });
 
 
 test("SE44 seriesIdRange.end matches its computed index", () => {
     const series = SERIES.find(s => s.name === "SE44");
-    assert.equal(series.seriesIdRange.end, maxFromIndex(series, RECORD_NUMBER_FIELD.SE44));
+    assert.equal(series.seriesIdRange.end, maxFromIndex(series));
 });
 
 
 test("SE45 seriesIdRange.end matches its computed index", () => {
     const series = SERIES.find(s => s.name === "SE45");
-    assert.equal(series.seriesIdRange.end, maxFromIndex(series, RECORD_NUMBER_FIELD.SE45));
+    assert.equal(series.seriesIdRange.end, maxFromIndex(series));
 });
 
 
@@ -93,19 +80,19 @@ test("SE46 seriesIdRange.end matches YEAR_METADATA's declared last number for 20
 
 test("S1988 seriesIdRange.end matches its computed index", () => {
     const series = SERIES.find(s => s.name === "S1988");
-    assert.equal(series.seriesIdRange.end, maxFromIndex(series, RECORD_NUMBER_FIELD.S1988));
+    assert.equal(series.seriesIdRange.end, maxFromIndex(series));
 });
 
 
 test("SM35 seriesIdRange.end matches its computed index", () => {
     const series = SERIES.find(s => s.name === "SM35");
-    assert.equal(series.seriesIdRange.end, maxFromIndex(series, RECORD_NUMBER_FIELD.SM35));
+    assert.equal(series.seriesIdRange.end, maxFromIndex(series));
 });
 
 
 test("S1963 seriesIdRange.end matches its computed index", () => {
     const series = SERIES.find(s => s.name === "S1963");
-    assert.equal(series.seriesIdRange.end, maxFromIndex(series, RECORD_NUMBER_FIELD.S1963));
+    assert.equal(series.seriesIdRange.end, maxFromIndex(series));
 });
 
 

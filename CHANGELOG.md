@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.1.2
+
+### Fixed
+
+- SE44 and S1963 had no bounds at all on series-ID lookup - a number
+  that was never actually generated (0, negative, or past the
+  series' real end) returned a plausible-looking but wrong
+  archive.org URL instead of no result. Every series now declares its
+  real numbering range (`seriesIdRange`), checked before a URL is
+  built - a number outside that range now correctly returns nothing,
+  for every series.
+- `listSeries()` now reports each series' `seriesIdRange`, so a caller
+  getting no results back can tell "that number doesn't exist" apart
+  from "that number exists but isn't covered by whatever search mode
+  was used."
+
 ## 1.1.1
 
 ### Fixed
