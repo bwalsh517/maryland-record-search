@@ -13,7 +13,7 @@ guide.
 Given a county + month/year, a known series/file ID, or (for one
 series so far) a raw certificate number, it returns the URL for the
 specific scanned file that record would be in. It has no UI of its
-own - `examples/basic-form/` is a reference implementation showing how
+own - `examples/basic-form/` ([live demo](https://bwalsh517.github.io/maryland-record-search/examples/basic-form/)) is a reference implementation showing how
 to wire it into a search form, but the library is designed to be
 called from your own site's search results (e.g. "user searched our
 death index, got a hit for Anne Arundel County, May 1910 - call
