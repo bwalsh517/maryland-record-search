@@ -292,6 +292,24 @@ if (typeof require !== "undefined") {
                 url: null,
                 msaGuideUrl,
 
+                // null for every series except a genuine multipart record
+                // (a single physical record with more than one distinct,
+                // non-contiguous date span - currently just CM1135-113).
+                // Distinguishes that record's two results from each other
+                // so lookupYear()'s dedup keys on (series, number, part)
+                // instead of collapsing them into one.
+                part: null,
+
+                // 0 for every series except a deliberately lower-confidence
+                // result (currently just CM1135's lost-number sets - see
+                // its lookupLocationMonthYear()). lookupMonth(), lookupYear()
+                // and lookupCertificate() stable-sort by this before
+                // returning, so a higher value always sorts after every
+                // ordinary result - regardless of which month a year
+                // search happens to discover it in, which plain discovery
+                // order can't guarantee on its own.
+                sortWeight: 0,
+
                 // Only set by series that support certificate-number
                 // lookup (see lookupCertificateNumber() above) - an
                 // approximate deep link into the scanned item, not a
