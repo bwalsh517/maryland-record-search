@@ -29,11 +29,13 @@ jobs:
           fetch-tags: true
 
       - name: Resolve which commit to deploy
+        id: resolve
         run: |
           if [[ "${{ github.event_name }}" == "push" && "${{ github.ref }}" == "refs/tags/deploy" ]]; then
             # deploy tag was pushed/moved directly - deploy what it points to
             TARGET=$(git rev-parse refs/tags/deploy)
             echo "Deploying from deploy tag ($TARGET)"
+            echo "via=deploy" >> "$GITHUB_OUTPUT"
           else
             # main was pushed, or the deploy tag was just deleted by
             # hand - main always wins either way. Any leftover deploy
@@ -45,20 +47,37 @@ jobs:
               echo "Deleted deploy tag - main takes over"
             fi
             echo "Deploying from main ($TARGET)"
+            echo "via=main" >> "$GITHUB_OUTPUT"
           fi
           git checkout "$TARGET"
 
       - name: Stamp version with git describe
         run: |
           # git describe against real vX.Y.Z tags reflects actual
-          # drift since the last release - exactly "v1.1.2" if this
-          # commit IS that release, or "v1.1.2-3-gabc1234" if main/the
-          # deploy tag has moved 3 commits past it. package.json's
-          # version alone can't show that, since it only changes on an
-          # actual release bump.
-          DESCRIBED=$(git describe --tags)
-          sed -i "s/global.MDRecordSearch.VERSION = \".*\";/global.MDRecordSearch.VERSION = \"${DESCRIBED}\";/" src/core/namespace.js
-          echo "Stamped version: ${DESCRIBED}"
+          # drift since the last release. --exclude=deploy is required
+          # - deploy points at exactly this commit by definition when
+          # it's the trigger, so without excluding it, git describe
+          # finds it first instead of the real release tag.
+          #
+          # When deployed via the deploy tag, the +deploy marker is
+          # inserted so it's visually distinct from an ordinary main
+          # deploy at a glance: v1.1.2+deploy-2-abc123 (deploy tag,
+          # 2 commits past the release) vs. v1.1.2-4-gabc123 (main,
+          # 4 commits past the release).
+          DESCRIBED=$(git describe --tags --exclude='deploy')
+
+          if [[ "${{ steps.resolve.outputs.via }}" == "deploy" ]]; then
+            if [[ "$DESCRIBED" =~ ^(v[0-9]+\.[0-9]+\.[0-9]+)-([0-9]+)-g([0-9a-f]+)$ ]]; then
+              STAMPED="${BASH_REMATCH[1]}+deploy-${BASH_REMATCH[2]}-${BASH_REMATCH[3]}"
+            else
+              STAMPED="${DESCRIBED}+deploy"
+            fi
+          else
+            STAMPED="$DESCRIBED"
+          fi
+
+          sed -i "s/global.MDRecordSearch.VERSION = \".*\";/global.MDRecordSearch.VERSION = \"${STAMPED}\";/" src/core/namespace.js
+          echo "Stamped version: ${STAMPED}"
 
       - uses: actions/configure-pages@v5
 
