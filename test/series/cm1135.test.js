@@ -238,6 +238,33 @@ test("certificate lookup: MSA-guide-only records (past CM1135-150) still resolve
 });
 
 
+test("certificate lookup: a scanned record (CM1135-1 through 150) gets an approximatePageUrl, same one-cert-per-page math as CM1132", () => {
+    // CM1135-31 covers A05605-A10750, archive.org URL confirmed in cm1135.test.js above.
+    const results = lookupCertificate("A10295", { recordType: "birth" });
+    const r31 = results.find(r => r.number === 31);
+
+    assert.ok(r31);
+    assert.equal(
+        r31.approximatePageUrl,
+        "https://archive.org/details/reclaim-the-records-baltimore-maryland-birth-certificates-1875-1922-cm-1135-001/Reclaim_The_Records_-_Baltimore_Maryland_Birth_Certificates_-_1875-1922_-_CM1135-031/page/n4690/mode/1up"
+    );
+});
+
+
+test("certificate lookup: the same letter+number can legitimately match both CM1132 (death) and CM1135 (birth) - recordType is what disambiguates", () => {
+    // A10295 falls inside CM1132-34 (death) AND CM1135-31/CM1135-71 (birth, two generations of the A block).
+    const unscoped = lookupCertificate("A10295");
+    const birthOnly = lookupCertificate("A10295", { recordType: "birth" });
+    const deathOnly = lookupCertificate("A10295", { recordType: "death" });
+
+    assert.ok(unscoped.some(r => r.series === "CM1132"));
+    assert.ok(unscoped.some(r => r.series === "CM1135"));
+
+    assert.ok(birthOnly.every(r => r.series === "CM1135"));
+    assert.ok(deathOnly.every(r => r.series === "CM1132"));
+});
+
+
 test("certificate lookup: a number outside CM1135's certificateSearchRange (post-1947, not yet transcribed) returns nothing", () => {
     assert.deepEqual(lookupCertificate("1960-A1", { recordType: "birth" }), []);
 });
