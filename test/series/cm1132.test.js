@@ -85,7 +85,7 @@ test("date search shows a distinct label for a record with a date but no certifi
 
 
 test("lookupCertificate() resolves the exact given page-jump example", () => {
-    const results = lookupCertificate("B100000");
+    const results = lookupCertificate("B100000", { recordType: "death" });
 
     assert.equal(results.length, 1);
     assert.equal(results[0].number, 94);
@@ -98,7 +98,7 @@ test("lookupCertificate() resolves the exact given page-jump example", () => {
 
 
 test("lookupCertificate() handles the unlettered block", () => {
-    const results = lookupCertificate("500");
+    const results = lookupCertificate("500", { recordType: "death" });
 
     assert.equal(results.length, 1);
     assert.equal(results[0].number, 1);
@@ -107,8 +107,8 @@ test("lookupCertificate() handles the unlettered block", () => {
 
 
 test("lookupCertificate() is case-insensitive on the letter prefix", () => {
-    const upper = lookupCertificate("B100000");
-    const lower = lookupCertificate("b100000");
+    const upper = lookupCertificate("B100000", { recordType: "death" });
+    const lower = lookupCertificate("b100000", { recordType: "death" });
 
     assert.deepEqual(upper, lower);
 });
@@ -117,21 +117,21 @@ test("lookupCertificate() is case-insensitive on the letter prefix", () => {
 test("lookupCertificate() correctly returns nothing for a number in a genuine inter-record gap", () => {
     // Record 15 ends at 48500, record 16 starts at 48507 - a real gap
     // of 6 numbers, not an artifact of parsing.
-    assert.deepEqual(lookupCertificate("48503"), []);
+    assert.deepEqual(lookupCertificate("48503", { recordType: "death" }), []);
 });
 
 
 test("lookupCertificate() rejects an invalid block letter and unparseable input", () => {
-    assert.deepEqual(lookupCertificate("H500"), []);
-    assert.deepEqual(lookupCertificate("nonsense"), []);
-    assert.deepEqual(lookupCertificate(""), []);
+    assert.deepEqual(lookupCertificate("H500", { recordType: "death" }), []);
+    assert.deepEqual(lookupCertificate("nonsense", { recordType: "death" }), []);
+    assert.deepEqual(lookupCertificate("", { recordType: "death" }), []);
 });
 
 
 test("lookupCertificate() correctly handles a range that crosses a letter block boundary (CM1132-31)", () => {
     // Nos. 98451-A1974 - starts unlettered, ends in the A block.
-    const beforeCrossover = lookupCertificate("99000");
-    const afterCrossover = lookupCertificate("A1000");
+    const beforeCrossover = lookupCertificate("99000", { recordType: "death" });
+    const afterCrossover = lookupCertificate("A1000", { recordType: "death" });
 
     assert.equal(beforeCrossover[0].number, 31);
     assert.equal(afterCrossover[0].number, 31);
@@ -166,8 +166,9 @@ test("listSeries() reports CM1132 with both location and certificate-number sear
 });
 
 
-test("listSeries() reports certificate-number search as false for every series except CM1132, SE46, and CE502", () => {
-    const series = listSeries().filter(s => s.name !== "CM1132" && s.name !== "SE46" && s.name !== "CE502");
+test("listSeries() reports certificate-number search as false for every series except CM1132, CM1135, SE46, and CE502", () => {
+    const withCertSearch = new Set(["CM1132", "CM1135", "SE46", "CE502"]);
+    const series = listSeries().filter(s => !withCertSearch.has(s.name));
     assert.ok(series.every(s => s.supportsCertificateNumberSearch === false));
 });
 
@@ -178,7 +179,7 @@ test("CM1132's dateRange reflects the real first and last record", () => {
 });
 
 test("lookupCertificate() returns no page link for CM1132-31 ( large file view issue, no page viewer)", () => {
-    const results = lookupCertificate("99000");
+    const results = lookupCertificate("99000", { recordType: "death" });
 
     assert.equal(results[0].number, 31);
     assert.equal(results[0].approximatePageUrl, null);
