@@ -97,6 +97,13 @@ test("lookupCertificate() resolves the exact given page-jump example", () => {
 });
 
 
+test("lookupCertificate() results carry location: Baltimore City, same as location/date search results", () => {
+    const results = lookupCertificate("B100000", { recordType: "death" });
+
+    assert.equal(results[0].location, "Baltimore City");
+});
+
+
 test("lookupCertificate() handles the unlettered block", () => {
     const results = lookupCertificate("500", { recordType: "death" });
 

@@ -517,6 +517,7 @@ if (typeof require !== "undefined") {
             // approximate page url is possible with the data we have.
             return [
                 this.createResult({
+                    location: "Baltimore City",
                     number: record.number,
                     year: record.date ? record.date.startYear : null,
                     month: record.date ? record.date.startMonth : null,
