@@ -126,7 +126,7 @@ if (typeof require !== "undefined") {
         }
 
 
-        addRecord(index, year, month, county, se45, label) {
+        addRecord(index, year, month, county, number, label) {
 
             const key = `${year}-${month}-${county}`;
 
@@ -134,7 +134,7 @@ if (typeof require !== "undefined") {
                 index[key] = [];
             }
 
-            index[key].push({ se45, label });
+            index[key].push({ number, label });
         }
 
 
@@ -184,9 +184,9 @@ if (typeof require !== "undefined") {
                     location: county,
                     year,
                     month,
-                    number: record.se45,
+                    number: record.number,
                     label: record.label || "",
-                    url: this.archiveUrl(record.se45)
+                    url: this.archiveUrl(record.number)
                 })
             );
         }
