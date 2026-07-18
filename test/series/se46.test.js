@@ -79,6 +79,8 @@ test("series lookup: confirmed unassigned numbers resolve to an informative resu
         number: 189,
         label: "Unassigned",
         url: null,
+        part: null,
+        sortWeight: 0,
         certificateNumber: null,
         approximatePageUrl: null
     });

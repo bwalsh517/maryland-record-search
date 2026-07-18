@@ -116,9 +116,11 @@ document
 
         } else if (certificateNumber) {
 
-            // Same reasoning as series ID - the number format itself
-            // already identifies which series it belongs to.
-            results = MDRecordSearch.lookupCertificate(certificateNumber);
+            // The number format alone no longer identifies a unique
+            // series - CM1132 (death) and CM1135 (birth) both use the
+            // same [YYYY-]LETTER?NUMBER shape, so the toggle has to
+            // filter here too, same as the location/date search below.
+            results = MDRecordSearch.lookupCertificate(certificateNumber, { recordType });
 
         } else {
 

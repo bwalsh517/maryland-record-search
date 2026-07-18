@@ -40,8 +40,11 @@ test("S1988 is registered as a birth series and is filterable separately from de
 
 
 test("S1988 does not handle Baltimore City", () => {
+    // Baltimore City birth records for this date are legitimately
+    // covered by CM1135 - check S1988 specifically isn't in the
+    // results, rather than asserting the whole result set is empty.
     const results = lookup({ location: "Baltimore City", month: 5, year: 1911, recordType: "birth" });
-    assert.deepEqual(results, []);
+    assert.ok(results.every(r => r.series !== "S1988"));
 });
 
 

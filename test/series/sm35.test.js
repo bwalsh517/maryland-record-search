@@ -111,7 +111,13 @@ test("a year genuinely outside the series (1952) returns no results", () => {
 
 
 test("SM35 does not handle Baltimore City or dates outside 1914-1951", () => {
-    assert.deepEqual(lookup({ location: "Baltimore City", month: 6, year: 1918, recordType: "birth" }), []);
+    // Baltimore City birth records for this date are legitimately
+    // covered by CM1135 - check SM35 specifically isn't in the
+    // results, rather than asserting the whole result set is empty.
+    assert.ok(
+        lookup({ location: "Baltimore City", month: 6, year: 1918, recordType: "birth" })
+            .every(r => r.series !== "SM35")
+    );
 
     // 1913 is outside SM35's range but legitimately covered by S1988,
     // and years past 1951 have no birth series at all yet - check SM35
