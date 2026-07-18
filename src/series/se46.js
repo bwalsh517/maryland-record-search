@@ -38,11 +38,11 @@ if (typeof require !== "undefined") {
     }
 
     // 2013-2014 (SE46-7032 to SE46-7215) were never uploaded to
-    // archive.org - the MSA guide entry is the only link there is.
-    function msaGuideUrl(number) {
-        return `https://guide.msa.maryland.gov/pages/item.aspx?ID=SE46-${number}`;
-    }
-
+    // archive.org - BaseSeries.archiveUrl()'s default MSA fallback
+    // handles the URL itself with no override needed here.
+    // isMsaGuideOnly() is still needed separately, to skip
+    // approximatePageUrl's page-jump math below, which doesn't apply to
+    // an MSA-only link.
     function isMsaGuideOnly(number) {
         return number >= 7032 && number <= 7215;
     }
@@ -86,22 +86,22 @@ if (typeof require !== "undefined") {
         return records;
     }
 
-    function parseYearCertificate(input) {
+    /**
+     * SE46's own numbers reset every year, so once BaseSeries.
+     * splitCertificateQuery() has split off the "YYYY-" prefix (see
+     * lookupCertificateNumber() below, which requires it - a bare
+     * number would be ambiguous), all that's left to check here is
+     * that what remains is a plain positive integer.
+     */
+    function parseCertificateNumber(rest) {
 
-        const match = String(input || "").trim().match(/^(\d{4})-(\d+)$/);
-
-        if (!match) {
+        if (!/^\d+$/.test(rest)) {
             return null;
         }
 
-        const year = Number(match[1]);
-        const cert = Number(match[2]);
+        const cert = Number(rest);
 
-        if (cert < 1) {
-            return null;
-        }
-
-        return { year, cert };
+        return cert >= 1 ? cert : null;
     }
 
 
@@ -202,7 +202,7 @@ if (typeof require !== "undefined") {
                             year,
                             number: record.number,
                             label: `Nos. ${record.certStart}-${record.certEnd} (statewide, not narrowed by county)`,
-                            url: isMsaGuideOnly(record.number) ? msaGuideUrl(record.number) : this.archiveUrl(record.number)
+                            url: this.archiveUrl(record.number)
                         })
                     );
                 }
@@ -334,13 +334,17 @@ if (typeof require !== "undefined") {
          */
         lookupCertificateNumber(input) {
 
-            const parsed = parseYearCertificate(input);
+            const { year, rest } = this.splitCertificateQuery(input);
 
-            if (!parsed) {
+            if (year === null) {
                 return [];
             }
 
-            const { year, cert } = parsed;
+            const cert = parseCertificateNumber(rest);
+
+            if (cert === null) {
+                return [];
+            }
 
             let record = null;
 
@@ -394,7 +398,7 @@ if (typeof require !== "undefined") {
                         number: record.number,
                         label: `Nos. ${record.certStart}-${record.certEnd}`,
                         certificateNumber: `${year}-${cert}`,
-                        url: msaGuideUrl(record.number)
+                        url: this.archiveUrl(record.number)
                     })
                 ];
             }
@@ -467,18 +471,12 @@ if (typeof require !== "undefined") {
             }
 
             // 2013-2014 (SE46-7032 to SE46-7215) were never uploaded
-            // to archive.org - the MSA guide entry is the only link
-            // there is. MSA may add these in the future; whatever the
-            // guide page itself says about availability is accurate,
-            // this library doesn't add its own commentary on top.
-            if (isMsaGuideOnly(number)) {
-                return [
-                    this.createResult({
-                        number,
-                        url: msaGuideUrl(number)
-                    })
-                ];
-            }
+            // to archive.org - falls through to super.lookupSeries()
+            // below, which resolves to the same MSA guide link via
+            // BaseSeries.archiveUrl()'s default fallback. MSA may add
+            // real scans in the future; whatever the guide page itself
+            // says about availability is accurate, this library doesn't
+            // add its own commentary on top.
 
             if (this.decemberWorcesterNumbers.has(number)) {
 

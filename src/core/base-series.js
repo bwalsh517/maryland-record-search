@@ -19,7 +19,9 @@ if (typeof require !== "undefined") {
      *     of sync with what canHandle() actually does.
      *   - canHandle(location, month, year) -> boolean
      *   - ARCHIVE_RANGES (if using the default table-based archiveUrl),
-     *     OR override archiveUrl(number) directly
+     *     OR override archiveUrl(number) directly - a series needs
+     *     neither if it has nothing better than the default MSA guide
+     *     fallback to offer (see archiveUrl() below)
      *   - buildIndex() + lookupLocationMonthYear(location, month, year),
      *     if the series supports location/date search (some only
      *     support direct series-ID lookup for now)
@@ -127,15 +129,43 @@ if (typeof require !== "undefined") {
         }
 
 
+        /**
+         * Every MSA-confirmed series number has a details page at this
+         * URL, whether or not a real scan exists there (MSA still shows
+         * a page saying so). Shared by archiveUrl()'s default fallback
+         * below and by any series that needs to build one directly
+         * (SE43's confirmed-missing-scan gap, SE46's 2013-2014 tail,
+         * etc.) instead of duplicating the template.
+         */
+        msaItemUrl(number) {
+            return `https://guide.msa.maryland.gov/pages/item.aspx?ID=${this.name}-${number}`;
+        }
+
+
+        /**
+         * Falls back to the MSA guide page once nothing more specific
+         * (ARCHIVE_RANGES, or a subclass's own override) has an answer -
+         * seriesIdRange is sourced directly from MSA's own numbering, so
+         * every number inside it has a real details page there, even if
+         * this library has no scan link for it yet. A subclass only
+         * needs to write code here when it has something better than
+         * the MSA page to offer for part of its range; everything else
+         * is free.
+         */
         archiveUrl(number) {
 
             const range = this.findArchiveRange(number);
 
-            if (!range) {
-                return null;
+            if (range) {
+                return this.buildArchiveUrl(range, number);
             }
 
-            return this.buildArchiveUrl(range, number);
+            if (this.seriesIdRange &&
+                number >= this.seriesIdRange.start && number <= this.seriesIdRange.end) {
+                return this.msaItemUrl(number);
+            }
+
+            return null;
         }
 
 
@@ -183,12 +213,45 @@ if (typeof require !== "undefined") {
 
 
         /**
-         * Only a few series (currently just CM1132) are numbered in a
-         * single running sequence where a specific certificate/record
-         * number can be looked up directly, independent of location or
-         * date. A series with no such numbering just returns no results
-         * here. Check listSeries()'s supportsCertificateNumberSearch
-         * field to know ahead of time whether a series supports this.
+         * The part of certificate-query parsing that's identical
+         * across every series that has one: an optional "YYYY-" year
+         * prefix, and the legacy "LETTER-NUMBER" dash style (e.g.
+         * "A-1234", kept for backward compatibility with CM1132's
+         * original input format - harmless for a series with no
+         * letters at all, since the dash just won't match anything and
+         * passes through untouched). What a subclass does with the
+         * remainder is not shared: whether the year is required or
+         * optional, whether it's a plain number or has its own letter
+         * scheme, is all series-specific and stays in each series'
+         * own lookupCertificateNumber().
+         */
+        splitCertificateQuery(input) {
+
+            let raw = String(input || "").trim().toUpperCase();
+            let year = null;
+
+            const yearMatch = raw.match(/^(\d{4})-(.+)$/);
+
+            if (yearMatch) {
+                year = Number(yearMatch[1]);
+                raw = yearMatch[2];
+            }
+
+            raw = raw.replace(/^([A-Z])-/, "$1");   // "A-1234" -> "A1234"
+
+            return { year, rest: raw };
+        }
+
+
+        /**
+         * Only some series (currently CM1132, CM1135, SE46, CE502) are
+         * numbered in a way that a specific certificate/record number
+         * can be looked up directly, independent of location or date -
+         * see splitCertificateQuery() above for the shared part of
+         * parsing one. A series with no such numbering just returns no
+         * results here. Check listSeries()'s
+         * supportsCertificateNumberSearch field to know ahead of time
+         * whether a series supports this.
          */
         lookupCertificateNumber(_certificateNumber) {
             return [];
@@ -234,6 +297,20 @@ if (typeof require !== "undefined") {
 
 
         createResult(fields = {}) {
+
+            const number = fields.number ?? null;
+
+            // Always the MSA details page for this number, regardless of
+            // what url ends up being (a real scan, an MSA link too, or
+            // null for a confirmed no-file record) - a separate, always-
+            // present pointer to "MSA's own page for this", useful even
+            // when a scan link is also present since MSA may document
+            // things this library doesn't.
+            const msaGuideUrl = (number !== null && this.seriesIdRange &&
+                number >= this.seriesIdRange.start && number <= this.seriesIdRange.end)
+                ? this.msaItemUrl(number)
+                : null;
+
             return {
                 series: this.name,
                 seriesType: this.seriesType,
@@ -246,6 +323,25 @@ if (typeof require !== "undefined") {
                 number: null,
                 label: "",
                 url: null,
+                msaGuideUrl,
+
+                // null for every series except a genuine multipart record
+                // (a single physical record with more than one distinct,
+                // non-contiguous date span - currently just CM1135-113).
+                // Distinguishes that record's two results from each other
+                // so lookupYear()'s dedup keys on (series, number, part)
+                // instead of collapsing them into one.
+                part: null,
+
+                // 0 for every series except a deliberately lower-confidence
+                // result (currently just CM1135's lost-number sets - see
+                // its lookupLocationMonthYear()). lookupMonth(), lookupYear()
+                // and lookupCertificate() stable-sort by this before
+                // returning, so a higher value always sorts after every
+                // ordinary result - regardless of which month a year
+                // search happens to discover it in, which plain discovery
+                // order can't guarantee on its own.
+                sortWeight: 0,
 
                 // Only set by series that support certificate-number
                 // lookup (see lookupCertificateNumber() above) - an

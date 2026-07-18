@@ -75,9 +75,12 @@ test("series lookup: confirmed unassigned numbers resolve to an informative resu
         location: null,
         year: null,
         month: null,
+        msaGuideUrl: "https://guide.msa.maryland.gov/pages/item.aspx?ID=SE46-189",
         number: 189,
         label: "Unassigned",
         url: null,
+        part: null,
+        sortWeight: 0,
         certificateNumber: null,
         approximatePageUrl: null
     });

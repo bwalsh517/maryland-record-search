@@ -28,25 +28,23 @@ if (typeof require !== "undefined") {
      * duplicate (currently just 1952's two certificates numbered
      * 3000 - see ce502-data.js's certStartLetter). Letter is returned
      * uppercased, or null if none was given; the caller (below)
-     * decides what a letter actually disambiguates.
+     * decides what a letter actually disambiguates. The "YYYY-" prefix
+     * itself is required and already split off by the time this runs -
+     * see BaseSeries.splitCertificateQuery(), called from
+     * lookupCertificateNumber() below.
      */
-    function parseYearCertificate(input) {
+    function parseCertificateNumber(rest) {
 
-        const match = String(input || "").trim().match(/^(\d{4})-(\d+)([A-Za-z]?)$/);
+        const match = rest.match(/^(\d+)([A-Z]?)$/);
 
         if (!match) {
             return null;
         }
 
-        const year = Number(match[1]);
-        const cert = Number(match[2]);
-        const letter = match[3] ? match[3].toUpperCase() : null;
+        const cert = Number(match[1]);
+        const letter = match[2] || null;
 
-        if (cert < 1) {
-            return null;
-        }
-
-        return { year, cert, letter };
+        return cert >= 1 ? { cert, letter } : null;
     }
 
 
@@ -131,13 +129,19 @@ if (typeof require !== "undefined") {
          */
         lookupCertificateNumber(input) {
 
-            const parsed = parseYearCertificate(input);
+            const { year, rest } = this.splitCertificateQuery(input);
+
+            if (year === null) {
+                return [];
+            }
+
+            const parsed = parseCertificateNumber(rest);
 
             if (!parsed) {
                 return [];
             }
 
-            const { year, cert, letter } = parsed;
+            const { cert, letter } = parsed;
 
             let matches = DATA.DATE_CERT_RECORDS.filter(record =>
                 record.year === year &&

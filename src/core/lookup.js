@@ -73,6 +73,19 @@ if (typeof require !== "undefined") {
 
 
     /**
+     * Stable sort by sortWeight (see createResult() in base-series.js) -
+     * pushes deliberately lower-confidence results (currently just
+     * CM1135's lost-number sets) after every ordinary result, without
+     * otherwise disturbing the order results were found in. A plain
+     * array.sort() in modern JS engines is already stable, so equal-
+     * weight results keep their relative order.
+     */
+    function sortByWeight(results) {
+        return results.slice().sort((a, b) => (a.sortWeight || 0) - (b.sortWeight || 0));
+    }
+
+
+    /**
      * All files covering one county (or "Baltimore City") for one
      * specific month/year. This is what lookup() calls internally when
      * a month is given - exposed separately in case you want it
@@ -98,9 +111,9 @@ if (typeof require !== "undefined") {
         // than one does, that's surfaced here (all results returned)
         // rather than silently picking the first registered one -
         // which would hide a real data/coverage bug in canHandle().
-        return candidates.flatMap(series =>
+        return sortByWeight(candidates.flatMap(series =>
             series.lookup({ location, month, year })
-        );
+        ));
     }
 
 
@@ -126,9 +139,14 @@ if (typeof require !== "undefined") {
      * isn't null there since a different file could start partway
      * through the year, so querying has to continue, but the same file
      * would otherwise show up once per month it covers. A second,
-     * explicit dedup by (series, number) catches that case: each
+     * explicit dedup by (series, number, part) catches that case: each
      * distinct file appears exactly once, at the first month it's
-     * found, regardless of how many months it actually spans.
+     * found, regardless of how many months it actually spans. `part`
+     * is null for every series except a genuine multipart record (one
+     * physical file with more than one distinct, non-contiguous date
+     * span - currently just CM1135-113) - without it in the key, the
+     * file's second span would get deduped away as if it were the
+     * same hit as the first.
      */
     function lookupYear(options) {
 
@@ -160,7 +178,7 @@ if (typeof require !== "undefined") {
 
                     for (const result of seriesResults) {
 
-                        const key = `${result.series}|${result.number}`;
+                        const key = `${result.series}|${result.number}|${result.part}`;
 
                         if (seenRecords.has(key)) {
                             continue;
@@ -176,7 +194,7 @@ if (typeof require !== "undefined") {
                 }
             }
 
-            return results;
+            return sortByWeight(results);
 
         } catch {
             return [];
@@ -203,9 +221,9 @@ if (typeof require !== "undefined") {
                 series.lookupCertificateNumber !== ns.BaseSeries.prototype.lookupCertificateNumber
             );
 
-            return candidates.flatMap(series =>
+            return sortByWeight(candidates.flatMap(series =>
                 series.lookupCertificateNumber(certificateNumber)
-            );
+            ));
 
         } catch {
             return [];

@@ -18,9 +18,10 @@ const SE46_DATA = require("../../src/series/se46-data.js");
  *    the "number" field every series' pushed records use.
  *
  *  - series-ID-only series (no buildIndex): there's no index to walk,
- *    so the real bound is whatever ARCHIVE_RANGES/MSA_GUIDE_RANGE
- *    already declares. These entries just confirm seriesIdRange
- *    agrees with that other table, not a second independent source.
+ *    so the real bound is whatever ARCHIVE_RANGES already declares
+ *    (CE502, CM1132), or is confirmed directly against archiveUrl()'s
+ *    actual resolve/no-resolve boundary (CM1135, which has no
+ *    ARCHIVE_RANGES entry covering its full range - see below).
  */
 function maxFromIndex(series) {
 
@@ -110,9 +111,10 @@ test("CM1132 seriesIdRange.end matches its ARCHIVE_RANGES table (no buildIndex t
 });
 
 
-test("CM1135 seriesIdRange.end matches its MSA_GUIDE_RANGE (no buildIndex to cross-check against)", () => {
+test("CM1135's seriesIdRange.end is where archiveUrl() actually stops resolving", () => {
     const series = SERIES.find(s => s.name === "CM1135");
-    assert.equal(series.seriesIdRange.end, series.MSA_GUIDE_RANGE.end);
+    assert.ok(series.archiveUrl(series.seriesIdRange.end), "last valid number should still resolve");
+    assert.equal(series.archiveUrl(series.seriesIdRange.end + 1), null, "one past the end should not");
 });
 
 
