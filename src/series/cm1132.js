@@ -15,14 +15,16 @@ if (typeof require !== "undefined") {
     // be compared as plain numbers.
     const CERT_BLOCK_LETTERS = ["", "A", "B", "C", "D", "E", "F", "G"];
 
-    function parseCertificateNumber(input) {
+    /**
+     * "LETTER?NUMBER" - e.g. "B45678", no letter for the earliest
+     * block. The optional "YYYY-" prefix and legacy "A-1234" dash
+     * style are already stripped by the time this runs - see
+     * BaseSeries.splitCertificateQuery(), called from
+     * lookupCertificateNumber() below.
+     */
+    function parseLetterNumber(rest) {
 
-        const raw = String(input || "")
-            .trim()
-            .toUpperCase()
-            .replace(/^([A-G])-/, "$1");   // "A-1234" -> "A1234"; leaves "-1234" alone
-
-        const match = raw.match(/^([A-G]?)(\d+)$/);
+        const match = rest.match(/^([A-G]?)(\d+)$/);
 
         if (!match) {
             return null;
@@ -469,9 +471,13 @@ if (typeof require !== "undefined") {
          * sequence across the whole series (not per-county or per-year
          * like the other series' record numbers), so a specific
          * certificate number can be looked up directly to find which
-         * scanned item it's in - see parseCertificateNumber() above for
-         * the input format ("B45678", case-insensitive, no letter for
-         * the earliest block).
+         * scanned item it's in - see parseLetterNumber() above and
+         * BaseSeries.splitCertificateQuery() for the input format
+         * ("B45678", case-insensitive, no letter for the earliest
+         * block; an optional "YYYY-" prefix is accepted for
+         * consistency with CM1135's certificate search, and validated
+         * against the record's actual date if given, even though no
+         * letter here is ever reused the way CM1135's are).
          *
          * Also computes an approximate deep link to the right page
          * within that item, assuming roughly one certificate per
@@ -485,7 +491,8 @@ if (typeof require !== "undefined") {
          */
         lookupCertificateNumber(certificateNumber) {
 
-            const linear = parseCertificateNumber(certificateNumber);
+            const { year, rest } = this.splitCertificateQuery(certificateNumber);
+            const linear = parseLetterNumber(rest);
 
             if (linear === null) {
                 return [];
@@ -496,6 +503,10 @@ if (typeof require !== "undefined") {
             );
 
             if (!record) {
+                return [];
+            }
+
+            if (year !== null && (year < record.date.startYear || year > record.date.endYear)) {
                 return [];
             }
 

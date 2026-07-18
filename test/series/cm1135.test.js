@@ -157,6 +157,19 @@ test("lost-number sets (CM1135-25 through 29) are always appended after main-seq
 });
 
 
+test("certificate lookup: the legacy letter-dash style (A-1234) works the same as CM1132's, via the shared splitCertificateQuery helper", () => {
+    assert.deepEqual(
+        lookupCertificate("A-10295", { recordType: "birth" }).map(r => r.number).sort((a, b) => a - b),
+        [31, 71]
+    );
+
+    assert.deepEqual(
+        lookupCertificate("1893-A-50000", { recordType: "birth" }).map(r => r.number),
+        [37]
+    );
+});
+
+
 test("certificate lookup: a plain number with no year prefix returns every record whose reused letter block contains it", () => {
     // "A" cycles twice - CM1135-37 (1893) and CM1135-85 (1909) both cover A50000.
     const results = lookupCertificate("A50000", { recordType: "birth" });

@@ -104,6 +104,33 @@ test("lookupCertificate() results carry location: Baltimore City, same as locati
 });
 
 
+test("lookupCertificate() accepts an optional YYYY- year prefix, matching CM1135's format", () => {
+    // Plain lookup, no year - unaffected.
+    const plain = lookupCertificate("A10295", { recordType: "death" });
+    assert.equal(plain.length, 1);
+    assert.equal(plain[0].number, 34);
+
+    // A correct year prefix behaves identically to no prefix at all.
+    const correctYear = lookupCertificate("1888-A10295", { recordType: "death" });
+    assert.deepEqual(correctYear, plain);
+
+    // A year that doesn't match the record's actual date returns
+    // nothing, rather than either ignoring the year or throwing.
+    assert.deepEqual(lookupCertificate("1950-A10295", { recordType: "death" }), []);
+
+    // The old letter-dash style ("A-1234") still works, with or
+    // without a year prefix in front of it.
+    assert.deepEqual(
+        lookupCertificate("A-10295", { recordType: "death" }).map(r => r.number),
+        [34]
+    );
+    assert.deepEqual(
+        lookupCertificate("1888-A-10295", { recordType: "death" }).map(r => r.number),
+        [34]
+    );
+});
+
+
 test("lookupCertificate() handles the unlettered block", () => {
     const results = lookupCertificate("500", { recordType: "death" });
 

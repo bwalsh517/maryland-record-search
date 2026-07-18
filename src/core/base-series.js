@@ -213,12 +213,45 @@ if (typeof require !== "undefined") {
 
 
         /**
-         * Only a few series (currently just CM1132) are numbered in a
-         * single running sequence where a specific certificate/record
-         * number can be looked up directly, independent of location or
-         * date. A series with no such numbering just returns no results
-         * here. Check listSeries()'s supportsCertificateNumberSearch
-         * field to know ahead of time whether a series supports this.
+         * The part of certificate-query parsing that's identical
+         * across every series that has one: an optional "YYYY-" year
+         * prefix, and the legacy "LETTER-NUMBER" dash style (e.g.
+         * "A-1234", kept for backward compatibility with CM1132's
+         * original input format - harmless for a series with no
+         * letters at all, since the dash just won't match anything and
+         * passes through untouched). What a subclass does with the
+         * remainder is not shared: whether the year is required or
+         * optional, whether it's a plain number or has its own letter
+         * scheme, is all series-specific and stays in each series'
+         * own lookupCertificateNumber().
+         */
+        splitCertificateQuery(input) {
+
+            let raw = String(input || "").trim().toUpperCase();
+            let year = null;
+
+            const yearMatch = raw.match(/^(\d{4})-(.+)$/);
+
+            if (yearMatch) {
+                year = Number(yearMatch[1]);
+                raw = yearMatch[2];
+            }
+
+            raw = raw.replace(/^([A-Z])-/, "$1");   // "A-1234" -> "A1234"
+
+            return { year, rest: raw };
+        }
+
+
+        /**
+         * Only some series (currently CM1132, CM1135, SE46, CE502) are
+         * numbered in a way that a specific certificate/record number
+         * can be looked up directly, independent of location or date -
+         * see splitCertificateQuery() above for the shared part of
+         * parsing one. A series with no such numbering just returns no
+         * results here. Check listSeries()'s
+         * supportsCertificateNumberSearch field to know ahead of time
+         * whether a series supports this.
          */
         lookupCertificateNumber(_certificateNumber) {
             return [];

@@ -86,22 +86,22 @@ if (typeof require !== "undefined") {
         return records;
     }
 
-    function parseYearCertificate(input) {
+    /**
+     * SE46's own numbers reset every year, so once BaseSeries.
+     * splitCertificateQuery() has split off the "YYYY-" prefix (see
+     * lookupCertificateNumber() below, which requires it - a bare
+     * number would be ambiguous), all that's left to check here is
+     * that what remains is a plain positive integer.
+     */
+    function parseCertificateNumber(rest) {
 
-        const match = String(input || "").trim().match(/^(\d{4})-(\d+)$/);
-
-        if (!match) {
+        if (!/^\d+$/.test(rest)) {
             return null;
         }
 
-        const year = Number(match[1]);
-        const cert = Number(match[2]);
+        const cert = Number(rest);
 
-        if (cert < 1) {
-            return null;
-        }
-
-        return { year, cert };
+        return cert >= 1 ? cert : null;
     }
 
 
@@ -334,13 +334,17 @@ if (typeof require !== "undefined") {
          */
         lookupCertificateNumber(input) {
 
-            const parsed = parseYearCertificate(input);
+            const { year, rest } = this.splitCertificateQuery(input);
 
-            if (!parsed) {
+            if (year === null) {
                 return [];
             }
 
-            const { year, cert } = parsed;
+            const cert = parseCertificateNumber(rest);
+
+            if (cert === null) {
+                return [];
+            }
 
             let record = null;
 

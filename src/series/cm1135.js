@@ -24,27 +24,26 @@ if (typeof require !== "undefined") {
 
 
     /**
-     * "[YYYY-]LETTER?NUMBER[SUFFIX]" - e.g. "A50000", "1909-A50000",
-     * "G33501D", "L609". The year prefix is optional and only useful
-     * for disambiguating a letter that was reused (see cm1135-data.js's
-     * header comment) - a query without it can and will match more
-     * than one record. "L" numbers are a completely separate namespace
-     * (the lost-number sets, see lookupCertificateNumber() below), not
-     * part of the main A-G letter cycle.
+     * "LETTER?NUMBER[SUFFIX]" - e.g. "A50000", "G33501D", "L609". The
+     * optional "YYYY-" prefix and legacy "A-50000" dash style are
+     * already stripped by the time this runs - see
+     * BaseSeries.splitCertificateQuery(), called from
+     * lookupCertificateNumber() below. "L" numbers are a completely
+     * separate namespace (the lost-number sets, see
+     * lookupCertificateNumber() below), not part of the main A-G
+     * letter cycle.
      */
-    function parseCertQuery(input) {
+    function parseLetterNumberSuffix(rest) {
 
-        const raw = String(input || "").trim().toUpperCase();
-        const match = raw.match(/^(?:(\d{4})-)?([A-GL]?)(\d+)([A-Z]?)$/);
+        const match = rest.match(/^([A-GL]?)(\d+)([A-Z]?)$/);
 
         if (!match) {
             return null;
         }
 
-        const [, yearStr, letter, numStr, suffix] = match;
+        const [, letter, numStr, suffix] = match;
 
         return {
-            year: yearStr ? Number(yearStr) : null,
             letter: letter || "",
             number: Number(numStr),
             suffix: suffix || null
@@ -199,13 +198,14 @@ if (typeof require !== "undefined") {
          */
         lookupCertificateNumber(input) {
 
-            const parsed = parseCertQuery(input);
+            const { year, rest } = this.splitCertificateQuery(input);
+            const parsed = parseLetterNumberSuffix(rest);
 
             if (!parsed) {
                 return [];
             }
 
-            const { year, letter, number, suffix } = parsed;
+            const { letter, number, suffix } = parsed;
 
             if (letter === "L") {
 

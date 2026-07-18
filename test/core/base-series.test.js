@@ -28,6 +28,71 @@ test("inDateRange with fully month-precise bounds behaves like a normal inclusiv
 });
 
 
+test("splitCertificateQuery: a plain letter+number has no year, dash untouched", () => {
+    const series = new BaseSeries("TEST", "death");
+    assert.deepEqual(series.splitCertificateQuery("B45678"), { year: null, rest: "B45678" });
+});
+
+
+test("splitCertificateQuery: a bare number (no letter) is untouched", () => {
+    const series = new BaseSeries("TEST", "death");
+    assert.deepEqual(series.splitCertificateQuery("9585"), { year: null, rest: "9585" });
+});
+
+
+test("splitCertificateQuery: a YYYY- prefix is extracted as a number", () => {
+    const series = new BaseSeries("TEST", "death");
+    assert.deepEqual(series.splitCertificateQuery("1900-B45678"), { year: 1900, rest: "B45678" });
+});
+
+
+test("splitCertificateQuery: the legacy LETTER-NUMBER dash style is normalized away", () => {
+    const series = new BaseSeries("TEST", "death");
+    assert.deepEqual(series.splitCertificateQuery("A-1234"), { year: null, rest: "A1234" });
+});
+
+
+test("splitCertificateQuery: a year prefix and the legacy dash style combine correctly", () => {
+    const series = new BaseSeries("TEST", "death");
+    assert.deepEqual(series.splitCertificateQuery("1900-A-1234"), { year: 1900, rest: "A1234" });
+});
+
+
+test("splitCertificateQuery: lowercase input is uppercased", () => {
+    const series = new BaseSeries("TEST", "death");
+    assert.deepEqual(series.splitCertificateQuery("b45678"), { year: null, rest: "B45678" });
+    assert.deepEqual(series.splitCertificateQuery("a-1234"), { year: null, rest: "A1234" });
+});
+
+
+test("splitCertificateQuery: leading/trailing whitespace is trimmed", () => {
+    const series = new BaseSeries("TEST", "death");
+    assert.deepEqual(series.splitCertificateQuery("  B45678  "), { year: null, rest: "B45678" });
+});
+
+
+test("splitCertificateQuery: a trailing suffix letter (CM1135's D-style, CE502's letter-duplicate style) survives untouched", () => {
+    const series = new BaseSeries("TEST", "death");
+    assert.deepEqual(series.splitCertificateQuery("G33501D"), { year: null, rest: "G33501D" });
+    assert.deepEqual(series.splitCertificateQuery("1945-G33501D"), { year: 1945, rest: "G33501D" });
+    assert.deepEqual(series.splitCertificateQuery("1952-3000A"), { year: 1952, rest: "3000A" });
+});
+
+
+test("splitCertificateQuery: empty, null, or non-string input returns no year and an empty rest", () => {
+    const series = new BaseSeries("TEST", "death");
+    assert.deepEqual(series.splitCertificateQuery(""), { year: null, rest: "" });
+    assert.deepEqual(series.splitCertificateQuery(null), { year: null, rest: "" });
+    assert.deepEqual(series.splitCertificateQuery(undefined), { year: null, rest: "" });
+});
+
+
+test("splitCertificateQuery: a dash with nothing after it is left alone, not treated as a year prefix", () => {
+    const series = new BaseSeries("TEST", "death");
+    assert.deepEqual(series.splitCertificateQuery("1900-"), { year: null, rest: "1900-" });
+});
+
+
 test("inDateRange treats startMonth 0 as January (includes the whole start year)", () => {
     const series = makeSeries({ startYear: 1900, startMonth: 0, endYear: 1905, endMonth: 6 });
 
