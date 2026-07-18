@@ -1,5 +1,66 @@
 # Changelog
 
+## 1.2.0
+
+### Added
+
+- CM1135 (Baltimore City, 1875 - 1947 for now) now has full
+  location/date and certificate-number search, in addition to
+  series-ID lookup - CM1135-1 through CM1135-322 transcribed as an
+  explicit per-record table (`src/series/cm1135-data.js`); the series
+  switches to the "YYYY-NNNNN" certificate format after 1947 and
+  isn't transcribed yet. Certificate results include an
+  `approximatePageUrl` using the same one-cert-per-page math as
+  CM1132, gated on the record actually having an archive.org scan
+  (CM1135-151 onward has none).
+- CM1132's certificate-number search now accepts the same optional
+  `"YYYY-"` year prefix CM1135 needs for disambiguation (see below),
+  for one consistent search format across both series - validated
+  against the record's actual date when given, even though no letter
+  in CM1132 is ever reused the way CM1135's are.
+- `listSeries()` and both series' results now report `location` and
+  `msaGuideUrl` consistently for CM1132 and CM1135's certificate
+  searches.
+
+### Changed
+
+- `BaseSeries` gains `splitCertificateQuery()`, consolidating the
+  "peel off an optional `YYYY-` prefix, normalize the legacy
+  `LETTER-NUMBER` dash style" step that CM1132, CM1135, SE46, and
+  CE502 all need. SE46 and CE502 previously each carried their own
+  copy of this; all four now share one implementation and keep only
+  the part that's genuinely different per series.
+- `createResult()` gains two new fields, both defaulting to values
+  that leave every other series' output unchanged: `part` (ties a
+  multipart record's several results together - see CM1135-113
+  below) and `sortWeight` (lets a series mark a result as
+  lower-confidence; `lookupMonth()`/`lookupYear()`/
+  `lookupCertificate()` now stable-sort by it before returning).
+- `lookupYear()`'s dedup key is now `(series, number, part)` instead
+  of `(series, number)`.
+
+### Notes on CM1135's data
+
+- Letters `A` and `B` each cycle through the full 1-100000 range
+  twice before `C`-`G` (so far) - a bare letter+number is genuinely
+  ambiguous between two real certificates. Certificate lookup returns
+  every match; the optional year prefix above disambiguates.
+- CM1135-113 covers two disjoint date spans on one physical record,
+  modeled as a single record with a list of date parts rather than
+  two separate entries.
+- CM1135's lost-number sets (CM1135-25 through 29, five multi-year
+  batches filed out of chronological order) are always returned after
+  every main-sequence match in a location/date search, narrowest
+  year-span first.
+- A few source oddities are carried through as transcribed, not
+  corrected: three certificate boundaries carry an unexplained
+  trailing "D", CM1135-302's date looks like a one-year typo against
+  its neighbors, CM1135-113's date overlaps CM1135-112's more than
+  the usual boundary month, and CM1135-241 is past the 100-year
+  access restriction so its certificate range is set to the numeric
+  gap between the surrounding records and labeled an estimate rather
+  than confirmed.
+
 ## 1.1.2
 
 ### Fixed
