@@ -145,12 +145,23 @@ case (e.g. resolving a citation someone already has).
 
 ### `lookupCertificate(certificateNumber, options)`
 
-Direct lookup by a raw certificate number, for the few series numbered
-in one continuous running sequence rather than per-county/per-date.
-Currently only CM1132 (Baltimore City death certificates) supports
-this - its numbering runs through un-lettered `1`-`100000`, then
-`A1`-`A100000`, `B1`-`B100000`, and so on through `G`. Equivalent to
+Direct lookup by a raw certificate number, for series numbered in one
+continuous or per-year running sequence rather than per-county/per-date.
+CM1132, CM1135, SE46, and CE502 support this - use `listSeries()`'s
+`supportsCertificateNumberSearch` field to check which series support
+it before relying on it, and `certificateSearchRange` for how much of
+a series' full date range that certificate coverage actually spans (it
+can be narrower than `dateRange` - see CM1135 below). Equivalent to
 `lookup({ certificateNumber, recordType })`.
+
+Every series accepts an optional `"YYYY-"` prefix in front of its own
+number format (`BaseSeries.splitCertificateQuery()` handles this one
+way for every series, so it can't drift out of sync between them) -
+required for SE46/CE502, where the year is part of the number itself;
+optional for CM1132/CM1135, where it narrows the search rather than
+being necessary to identify a record. A legacy `"LETTER-NUMBER"` dash
+style (e.g. `"A-1234"`) is also normalized the same way everywhere,
+for CM1132/CM1135's letter-block series.
 
 ```js
 lookupCertificate("B45678");
@@ -168,9 +179,9 @@ formula; see the comment on `lookupCertificateNumber()` in
 `src/series/cm1132.js`). If the estimate overshoots the item's actual
 page count, archive.org's viewer just lands on page 1 rather than
 breaking, so an imprecise estimate is harmless - just less useful for
-certificates near the end of a large range. Use `listSeries()`'s
-`supportsCertificateNumberSearch` field to check which series support
-this before relying on it.
+certificates near the end of a large range. `null` when the record has
+no archive.org scan to jump into at all (an MSA-guide-only record, or
+a series where the page-jump ratio isn't confirmed).
 
 ### `VERSION`
 
@@ -252,7 +263,17 @@ building UI around it.
   month: 5,                 // null if the file covers the whole year
   number: 1,                // file number within the series
   label: "",                // surname-range label, e.g. "A-K", if the file was split
-  url: "https://archive.org/details/..."
+  url: "https://archive.org/details/...",
+  msaGuideUrl: "https://guide.msa.maryland.gov/...", // MSA's own page for this number, always present when the number is in range - separate from url, which may be a real scan, the same MSA page, or null
+
+  // Only set for certificate-number lookups (see lookupCertificate() below) - null otherwise.
+  certificateNumber: null,
+  approximatePageUrl: null,
+
+  // Rarely relevant - both default to values that make every ordinary
+  // result look exactly like the shape above.
+  part: null,       // ties a multipart record's several results together (currently only CM1135-113)
+  sortWeight: 0      // higher sorts after every ordinary result (currently only CM1135's lost-number sets)
 }
 ```
 
@@ -298,9 +319,12 @@ test/
 ## Adding a new series (including birth certificates)
 
 1. Copy an existing series file in `src/series/` as a starting point -
-   `cm1135.js` is the simplest (series-ID lookup only), `se43.js` is
-   the most complete (also does location/date search, including
-   surname-range file splits).
+   `s1988.js` is the simplest (location/date + series-ID search, no
+   certificate-number search), `se43.js` is the most complete simple
+   case (also does surname-range file splits), and `cm1135.js` is
+   worth a look if your series needs certificate-number search too,
+   though it's a more involved example (see "Known limitations" below
+   for why).
 2. Extend `BaseSeries`, call `super(name, recordType)` - use `"birth"`
    for a birth certificate series.
 3. Set `this.dateRange = { startYear, startMonth, endYear, endMonth }`
@@ -341,13 +365,56 @@ just data, not something to try to generalize into a formula.
   certificate per scanned page, confirmed against one anchor point),
   not a precise page number. One confirmed unused record (CM1132-244,
   "previously a duplicate entry") returns an informative result with a
-  null `url` rather than a broken or misleading link.
+  null `url` rather than a broken or misleading link. Certificate
+  lookup also accepts an optional `"YYYY-"` prefix (see
+  `lookupCertificate()` above) - not needed to identify a record here
+  since no letter block is ever reused, but validated against the
+  record's actual date if given, for a consistent search format with
+  CM1135 below.
 
-- **CM1135** (birth, 1875-1972, Baltimore City only): series-ID search
-  only - no location/date search implemented. Its `dateRange` uses
-  `startMonth: 0` and `endMonth: 0` since only years were given, not
-  specific months (see the `month: 0` convention documented under
-  `listSeries()` above).
+- **CM1135** (birth, 1875-1972, Baltimore City only): fully implemented
+  location/date, series-ID, and certificate-number search - CM1135-1
+  through CM1135-322 (through 12/1947) are transcribed as an explicit
+  per-record table (`src/series/cm1135-data.js`); the series switches
+  to a `"YYYY-NNNNN"` certificate format after that and isn't
+  transcribed yet, so `certificateSearchRange` is narrower than the
+  series' full `dateRange` (see `listSeries()` above). Its `dateRange`
+  uses `startMonth: 0` and `endMonth: 0` since only years were given
+  for the untranscribed tail, not specific months.
+
+  Unlike CM1132, this series' letter blocks are **not** one continuous
+  sequence - `A` and `B` each cycle through the full `1`-`100000` range
+  twice before `C`-`G` (so far), so a bare letter+number like
+  `"A50000"` is genuinely ambiguous between two real certificates.
+  `lookupCertificate()` returns every matching record in that case; the
+  optional `"YYYY-"` prefix (see `lookupCertificate()` above) narrows
+  to just the one covering that year. A trailing suffix letter on a
+  few certificate numbers (e.g. `"G33501D"`) works the same way CE502's
+  confirmed duplicate suffix does - matches with or without it, narrows
+  to just that boundary with it.
+
+  CM1135-113 covers two disjoint date spans on one physical record
+  (kept as a single record with a list of date parts rather than two
+  separate entries, so it can't get split apart later) - a month search
+  only ever returns one hit for it, a year search correctly returns
+  both.
+
+  CM1135-25 through 29 are five multi-year batches of certificates
+  filed out of chronological order under their own `"L"` prefix instead
+  of a normal date-based slot (their year spans also overlap each other
+  and the main sequence). A location/date search always returns these
+  after every main-sequence match, sorted narrowest year-span first,
+  rather than mixed in with more specific hits.
+
+  A few source oddities are carried through as transcribed, not
+  corrected: three certificate boundaries (including the `"D"` suffix
+  example above) have an unexplained trailing letter, CM1135-302's date
+  looks like a one-year typo against its neighbors, CM1135-113's date
+  overlaps CM1135-112's more than the usual single-month boundary, and
+  CM1135-241 is past the 100-year public-access restriction so its
+  certificate range is set to the numeric gap between the surrounding
+  records and labeled an estimate in its result rather than confirmed
+  data.
 
 - **S1963** (birth, Aug 1898 - Apr 1910): fully implemented location/date
   and series-ID search, including 11 known "no file" records (they
