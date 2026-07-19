@@ -1,0 +1,17 @@
+{
+    "source": {
+        "include": [
+            "src/core/namespace.js",
+            "src/core/lookup.js",
+            "src/core/base-series.js"
+        ]
+    },
+    "opts": {
+        "destination": "docs/",
+        "readme": "README.md"
+    },
+    "templates": {
+        "cleverLinks": false,
+        "monospaceLinks": false
+    }
+}
