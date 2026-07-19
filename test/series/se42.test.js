@@ -1,7 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const { lookup, lookupSeries } = require("../../src/index.js");
+const { lookup } = require("../../src/index.js");
 
 
 test("SE42-63 (first regular-rotation record) is Anne Arundel, Aug 1898", () => {
@@ -34,7 +34,7 @@ for (const testCase of leadingSpecials) {
 test("SE42 records 1-21 are series-ID only (not indexed by location/date)", () => {
     // These predate even the leading-specials block and aren't broken
     // out by county/month yet.
-    const results = lookupSeries("SE42-21");
+    const results = lookup({ series: "SE42-21" });
     assert.equal(results.length, 1);
     assert.equal(results[0].location, null);
 });
@@ -56,7 +56,7 @@ test("SE42-3297 and SE42-3298 are the trailing Washington County special cases",
 
 
 test("SE42-345 series lookup resolves to a valid archive.org URL", () => {
-    const results = lookupSeries("SE42-345");
+    const results = lookup({ series: "SE42-345" });
     assert.ok(results[0].url.startsWith("https://archive.org/details/"));
 });
 

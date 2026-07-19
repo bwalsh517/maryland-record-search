@@ -1,22 +1,22 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const { lookup, lookupSeries, listSeries } = require("../../src/index.js");
+const { lookup, listSeries } = require("../../src/index.js");
 
 
 test("S1988-1, S1988-501, S1988-1000 resolve to the exact given archive.org URLs", () => {
     assert.equal(
-        lookupSeries("S1988-1")[0].url,
+        lookup({ series: "S1988-1" })[0].url,
         "https://archive.org/details/reclaim-the-records-maryland-birth-certificates-1910-1913-s-1988-1/Reclaim_The_Records_-_Maryland_Birth_Certificates_-_1910-1913_-_S1988-001/"
     );
 
     assert.equal(
-        lookupSeries("S1988-501")[0].url,
+        lookup({ series: "S1988-501" })[0].url,
         "https://archive.org/details/reclaim-the-records-maryland-birth-certificates-1910-1913-s-1988-501/Reclaim_The_Records_-_Maryland_Birth_Certificates_-_1910-1913_-_S1988-501/"
     );
 
     assert.equal(
-        lookupSeries("S1988-1000")[0].url,
+        lookup({ series: "S1988-1000" })[0].url,
         "https://archive.org/details/reclaim-the-records-maryland-birth-certificates-1910-1913-s-1988-1000/Reclaim_The_Records_-_Maryland_Birth_Certificates_-_1910-1913_-_S1988-1000/"
     );
 });

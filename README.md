@@ -77,82 +77,51 @@ No published package yet - clone the repo and either:
 
 ### `lookup(options)`
 
-The main entry point. Call it one of three ways, depending on what
-you already know:
+The single entry point. Provide whatever subset of fields you know;
+more fields means a more specific search.
 
 | Parameter | Type | Description |
 |---|---|---|
 | `location` | string | County name, or `"Baltimore City"`. Accepts loose forms too - unambiguous prefixes ("Wor" -> "Worcester"), a small alias table ("pg" -> "Prince George's"), and numeric county codes. |
-| `month` | number | 1-12. Omit to search the whole year (calls `lookupYear` internally). |
-| `year` | number | |
+| `month` | number | 1-12. Omit to search the whole year. |
+| `year` | number | Required alongside `location`. Also used with `certificateNumber` (see below) when it has no embedded year prefix of its own. |
 | `series` | string | A known series/file ID, e.g. `"SE45-1037"`. Use this on its own instead of location/month/year. |
-| `certificateNumber` | string | A raw certificate number, e.g. `"1909-A50000"`. Use this on its own instead of location/month/year. |
+| `certificateNumber` | string | A raw certificate number, e.g. `"B100000"` or `"1909-A50000"`. Use this on its own instead of location/month/year. |
 | `recordType` | string | `"death"` or `"birth"`. Optional - only needed when a query could plausibly match more than one record type. |
 
 **Returns:** an array of result objects (see [Result shape](#result-shape) below). Empty if nothing matches. Never throws.
 
 ```js
-lookup({ location: "Anne Arundel", month: 5, year: 1910, recordType: "death" });
+// Series/file ID - direct lookup of a known citation
 lookup({ series: "SE45-1037" });
+
+// Certificate number - CM1132, CM1135, SE46, and CE502 support this;
+// check listSeries()'s supportsCertificateNumberSearch field first
 lookup({ certificateNumber: "1909-A50000", recordType: "birth" });
+
+// County + month + year
+lookup({ location: "Anne Arundel", month: 5, year: 1910, recordType: "death" });
+
+// County + year, month omitted - every file covering that county
+// across the whole year, useful when you don't know the month or
+// want to browse a year at once
+lookup({ location: "Anne Arundel", year: 1969, recordType: "death" });
 ```
 
-### `lookupYear(options)`
-
-Every file covering one county across a whole year, for when you
-don't know the month or want to browse a year at once.
-
-| Parameter | Type | Description |
-|---|---|---|
-| `location` | string | County name, or `"Baltimore City"`. |
-| `year` | number | |
-| `recordType` | string | `"death"` or `"birth"`. Optional. |
-
-**Returns:** an array of result objects, one per month a file covers
-(a file that covers the whole year, or several months at once, is
-only listed once - not duplicated per month). Never throws.
+**Certificate number + a separate `year` field.** `certificateNumber`
+may already carry its own `"YYYY-"` prefix (required for SE46/CE502,
+optional for CM1132/CM1135, and how MSA references certificate
+numbers for the years where it applies). A separate `year` field is
+only consulted when the string has no prefix of its own - an embedded
+prefix always wins. If both are present and disagree, that's an
+unresolvable query and this returns `[]` rather than guessing which
+one is right, the same as any other query that happens to match
+nothing.
 
 ```js
-lookupYear({ location: "Anne Arundel", year: 1969, recordType: "death" });
-```
-
-`lookup({ location, year, recordType })` with `month` omitted calls
-this automatically.
-
-### `lookupSeries(seriesId)`
-
-Direct lookup of a known series/file, e.g. from a citation you
-already have.
-
-| Parameter | Type | Description |
-|---|---|---|
-| `seriesId` | string | Full series/file ID, e.g. `"SE45-1037"`. |
-
-**Returns:** an array with one result if the ID resolves, otherwise
-empty. Equivalent to `lookup({ series: seriesId })`.
-
-```js
-lookupSeries("SE45-1037");
-```
-
-### `lookupCertificate(certificateNumber, options)`
-
-Direct lookup by a raw certificate number, for the series numbered in
-a running sequence rather than per-county/per-date (currently CM1132,
-CM1135, SE46, and CE502).
-
-| Parameter | Type | Description |
-|---|---|---|
-| `certificateNumber` | string | E.g. `"B100000"` or `"1995-1234"`. |
-| `options.recordType` | string | `"death"` or `"birth"`. Optional. |
-
-**Returns:** an array of result objects, empty if nothing matches.
-Equivalent to `lookup({ certificateNumber, recordType })`. Check
-`listSeries()`'s `supportsCertificateNumberSearch` field to see which
-series support this before relying on it.
-
-```js
-lookupCertificate("B100000", { recordType: "death" });
+lookup({ certificateNumber: "A50000", year: 1893, recordType: "birth" });
+// same result as:
+lookup({ certificateNumber: "1893-A50000", recordType: "birth" });
 ```
 
 ### `listSeries()`
@@ -185,8 +154,7 @@ limitations below).
 
 ### Result shape
 
-Every `lookup`/`lookupYear`/`lookupSeries`/`lookupCertificate` call
-returns an array of objects shaped like this:
+Every `lookup()` call returns an array of objects shaped like this:
 
 | Field | Type | Description |
 |---|---|---|
@@ -247,7 +215,7 @@ src/
     counties.js          - county name normalization + aliases
     base-series.js        - abstract class every series extends
     series-registry.js   - the list of registered series instances
-    lookup.js             - lookup() / lookupSeries() / listSeries()
+    lookup.js             - lookup() / listSeries()
   series/
     se42.js, se43.js, ...  - one file per archive.org series
   index.js                - Node/bundler entry point
@@ -307,9 +275,10 @@ just data, not something to try to generalize into a formula.
   files), so each result's `label` leads with the record's actual date
   span (e.g. `"01/1914-04/1914 Nos. C71526-C74735"`), not just the
   certificate range - a single hit already tells you the full window
-  it covers. `lookupYear()` correctly shows each physical file once
-  even though it's queried once per month, rather than once per month
-  it happens to cover. A date search on a month shared between two
+  it covers. A year-level search (`lookup({ location, year, recordType })`
+  with `month` omitted) correctly shows each physical file once even
+  though it's queried once per month internally, rather than once per
+  month it happens to cover. A date search on a month shared between two
   consecutive records' overlapping ranges (they deliberately overlap
   by one month) returns both, not a guess at which one is right; and
   `approximatePageUrl` from certificate lookup is a rough estimate (~1
@@ -317,8 +286,8 @@ just data, not something to try to generalize into a formula.
   not a precise page number. One confirmed unused record (CM1132-244,
   "previously a duplicate entry") returns an informative result with a
   null `url` rather than a broken or misleading link. Certificate
-  lookup also accepts an optional `"YYYY-"` prefix (see
-  `lookupCertificate()` above) - not needed to identify a record here
+  lookup also accepts an optional `"YYYY-"` prefix (see `lookup()`'s
+  certificate number handling above) - not needed to identify a record here
   since no letter block is ever reused, but validated against the
   record's actual date if given, for a consistent search format with
   CM1135 below.
@@ -337,9 +306,10 @@ just data, not something to try to generalize into a formula.
   sequence - `A` and `B` each cycle through the full `1`-`100000` range
   twice before `C`-`G` (so far), so a bare letter+number like
   `"A50000"` is genuinely ambiguous between two real certificates.
-  `lookupCertificate()` returns every matching record in that case; the
-  optional `"YYYY-"` prefix (see `lookupCertificate()` above) narrows
-  to just the one covering that year. A trailing suffix letter on a
+  A certificate-number lookup returns every matching record in that
+  case; the optional `"YYYY-"` prefix (see `lookup()`'s certificate
+  number handling above) narrows to just the one covering that year.
+  A trailing suffix letter on a
   few certificate numbers (e.g. `"G33501D"`) works the same way CE502's
   confirmed duplicate suffix does - matches with or without it, narrows
   to just that boundary with it.
@@ -442,8 +412,7 @@ just data, not something to try to generalize into a formula.
   series-ID lookup works for that range. Everything from record 22
   onward (May 1898 through the end of the series) is fully indexed.
 - **"Unknown month" is now supported** - `lookup({ location, year })`
-  with `month` omitted searches every month of that year (see
-  `lookupYear()`).
+  with `month` omitted searches every month of that year.
 - **S1988** (birth, May 1910 - Dec 1913) is registered and its
   location/date grid is fully implemented, but the archive.org URL
   range for file numbers past 1000 is a provisional estimate (1012,

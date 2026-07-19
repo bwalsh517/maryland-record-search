@@ -112,7 +112,7 @@ document
             // so the toggle doesn't need to filter it - unlike the
             // location/date search below, where recordType is what tells
             // lookup() which series are even eligible to match.
-            results = MDRecordSearch.lookupSeries(seriesId);
+            results = MDRecordSearch.lookup({ series: seriesId });
 
         } else if (certificateNumber) {
 
@@ -120,7 +120,7 @@ document
             // series - CM1132 (death) and CM1135 (birth) both use the
             // same [YYYY-]LETTER?NUMBER shape, so the toggle has to
             // filter here too, same as the location/date search below.
-            results = MDRecordSearch.lookupCertificate(certificateNumber, { recordType });
+            results = MDRecordSearch.lookup({ certificateNumber, recordType });
 
         } else {
 

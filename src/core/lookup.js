@@ -11,22 +11,10 @@ if (typeof require !== "undefined") {
     /**
      * @typedef {object} LookupOptions
      * @property {string} [series] - Direct series/file ID, e.g. "SE45-1037".
-     * @property {string} [certificateNumber] - Raw certificate number, e.g. "B45678".
+     * @property {string} [certificateNumber] - Raw certificate number, e.g. "B45678". May carry its own "YYYY-" prefix.
      * @property {string} [location] - County name (or "Baltimore City"), or a recognized alias/code.
      * @property {number} [month] - 1-12. Omit to search the whole year.
-     * @property {number} [year]
-     * @property {string} [recordType] - "death" or "birth". Omit to search every registered type.
-     */
-
-    /**
-     * @typedef {object} LookupYearOptions
-     * @property {string} location - County name (or "Baltimore City"), or a recognized alias/code.
-     * @property {number} year
-     * @property {string} [recordType] - "death" or "birth". Omit to search every registered type.
-     */
-
-    /**
-     * @typedef {object} LookupCertificateOptions
+     * @property {number} [year] - Also consulted for certificateNumber when it has no embedded year prefix of its own.
      * @property {string} [recordType] - "death" or "birth". Omit to search every registered type.
      */
 
@@ -43,19 +31,23 @@ if (typeof require !== "undefined") {
      */
 
     /**
-     * Main entry point for third-party integrations.
-     *
-     * Four ways to call it:
+     * The single public entry point for third-party integrations. Provide
+     * whatever subset of fields you know; more fields means a more
+     * specific search. Four ways to call it:
      *
      *   lookup({ series: "SE45-1037" })
      *     -> direct lookup of a known series/file number, e.g. from a
      *        citation or an existing index someone already has.
      *
      *   lookup({ certificateNumber: "B45678", recordType })
-     *     -> direct lookup by a raw certificate number, for the few
-     *        series (currently just CM1132) numbered in one continuous
-     *        running sequence rather than per-county/per-year. See
-     *        lookupCertificate() below.
+     *     -> direct lookup by a raw certificate number, for the series
+     *        (CM1132, CM1135, SE46, CE502) numbered in one continuous or
+     *        per-year running sequence rather than per-county/per-date.
+     *        certificateNumber may carry its own "YYYY-" prefix
+     *        (required for SE46/CE502, optional for CM1132/CM1135); a
+     *        separate `year` field is only consulted when the prefix is
+     *        absent. If both are present and disagree, this returns []
+     *        rather than guessing which one is right.
      *
      *   lookup({ location, month, year, recordType })
      *     -> find which series/file covers a given county (or
@@ -63,17 +55,20 @@ if (typeof require !== "undefined") {
      *
      *   lookup({ location, year, recordType })  (month omitted)
      *     -> find every file covering that county for every month of
-     *        that year - equivalent to calling lookupYear() directly.
-     *        Useful when you don't know the month, or want to show a
-     *        whole year's worth of files at once.
+     *        that year. Useful when you don't know the month, or want
+     *        to show a whole year's worth of files at once.
      *
-     * `recordType` ("death", and eventually "birth") is optional and
-     * only needed once more than one record type is registered - omit
-     * it and every registered series is considered, same as today.
+     * `recordType` ("death" or "birth") is optional and only needed
+     * once more than one record type is registered - omit it and every
+     * registered series is considered.
      *
      * Always returns an array (possibly empty) and never throws -
-     * malformed input (an unrecognized county string, a garbage
-     * series ID, etc.) just yields no results. If you want to
+     * malformed or self-contradictory input (an unrecognized county
+     * string, a garbage series ID, two disagreeing certificate years)
+     * just yields no results, the same as a well-formed query that
+     * happens to match nothing. This is what makes it safe to call with
+     * untrusted input (a UI form, a caller's own search index) without
+     * every integration needing its own try/catch. If you want to
      * validate a location string yourself and see *why* it failed,
      * call MDRecordSearch.counties.normalizeCounty() directly - it
      * throws a CountyNotFoundError with detail.
@@ -92,7 +87,10 @@ if (typeof require !== "undefined") {
             }
 
             if (options.certificateNumber) {
-                return lookupCertificate(options.certificateNumber, { recordType: options.recordType });
+                return lookupCertificate(options.certificateNumber, {
+                    recordType: options.recordType,
+                    year: options.year
+                });
             }
 
             if (options.location && options.year && !options.month) {
@@ -187,10 +185,10 @@ if (typeof require !== "undefined") {
      * file's second span would get deduped away as if it were the
      * same hit as the first.
      *
-     * @param {LookupYearOptions} options
-     * @returns {Array.<LookupResult>} Matching results for the whole year, possibly empty. Never throws.
-     * @function
-     * @memberof MDRecordSearch
+     * Not part of the public API - lookup({ location, year, recordType })
+     * with month omitted calls this internally. Kept as its own named
+     * function since "the whole-year path" is a real, distinct piece of
+     * logic worth reading on its own, not because callers need the name.
      */
     function lookupYear(options) {
 
@@ -248,23 +246,38 @@ if (typeof require !== "undefined") {
 
     /**
      * Direct lookup by a raw certificate/record number, for series
-     * numbered in one continuous running sequence rather than
-     * per-county/per-date (currently just CM1132's Baltimore City
-     * death certificates, e.g. "B45678"). Most series don't support
-     * this at all - see listSeries()'s supportsCertificateNumberSearch
-     * field to check ahead of time.
+     * numbered in one continuous or per-year running sequence rather
+     * than per-county/per-date (CM1132, CM1135, SE46, CE502). Most
+     * series don't support this at all - see listSeries()'s
+     * supportsCertificateNumberSearch field to check ahead of time.
      *
-     * @param {string} certificateNumber - Raw certificate/record number, e.g. "B45678" or "1995-1234".
-     * @param {LookupCertificateOptions} [options]
-     * @returns {Array.<LookupResult>} Matching results, possibly empty. Never throws.
-     * @function
-     * @memberof MDRecordSearch
+     * certificateNumber may already carry its own "YYYY-" prefix
+     * (splitCertificateQuery() on BaseSeries parses it per series).
+     * options.year is a convenience for callers who have the year as a
+     * separate field rather than embedded in the string - it's only
+     * consulted when certificateNumber has no prefix of its own; an
+     * embedded prefix always wins. If both are present and disagree,
+     * that's an unresolvable query (two different claimed years for
+     * the same certificate) and this returns [] rather than guessing.
+     *
+     * Not part of the public API - lookup({ certificateNumber, ... })
+     * calls this internally.
      */
     function lookupCertificate(certificateNumber, options = {}) {
 
-        const { recordType } = options;
+        const { recordType, year } = options;
 
         try {
+
+            const raw = String(certificateNumber || "").trim();
+            const embeddedYear = raw.match(/^(\d{4})-/);
+
+            if (embeddedYear && year != null && Number(year) !== Number(embeddedYear[1])) {
+                return [];
+            }
+
+            const effectiveCertificateNumber =
+                (!embeddedYear && year != null) ? `${year}-${raw}` : raw;
 
             const candidates = ns.SERIES.filter(series =>
                 (!recordType || series.seriesType === recordType) &&
@@ -272,7 +285,7 @@ if (typeof require !== "undefined") {
             );
 
             return sortByWeight(candidates.flatMap(series =>
-                series.lookupCertificateNumber(certificateNumber)
+                series.lookupCertificateNumber(effectiveCertificateNumber)
             ));
 
         } catch {
@@ -287,10 +300,8 @@ if (typeof require !== "undefined") {
      * "-"), not by prefix - so a malformed ID can't be misattributed
      * to an unrelated series just because their names share a prefix.
      *
-     * @param {string} seriesId - Full series/file ID, e.g. "SE45-1037".
-     * @returns {Array.<LookupResult>} A single-element array if the ID resolves, otherwise empty. Never throws.
-     * @function
-     * @memberof MDRecordSearch
+     * Not part of the public API - lookup({ series }) calls this
+     * internally.
      */
     function lookupSeries(seriesId) {
 
@@ -366,12 +377,9 @@ if (typeof require !== "undefined") {
 
 
     ns.lookup = lookup;
-    ns.lookupYear = lookupYear;
-    ns.lookupSeries = lookupSeries;
-    ns.lookupCertificate = lookupCertificate;
     ns.listSeries = listSeries;
 
-    const api = { lookup, lookupYear, lookupSeries, lookupCertificate, listSeries };
+    const api = { lookup, listSeries };
 
     if (typeof module !== "undefined" && module.exports) {
         module.exports = api;

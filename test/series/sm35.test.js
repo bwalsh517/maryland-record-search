@@ -1,22 +1,22 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const { lookup, lookupYear, lookupSeries, listSeries } = require("../../src/index.js");
+const { lookup, listSeries } = require("../../src/index.js");
 
 
 test("SM35-1, SM35-36, SM35-72 resolve to the exact given archive.org URLs", () => {
     assert.equal(
-        lookupSeries("SM35-1")[0].url,
+        lookup({ series: "SM35-1" })[0].url,
         "https://archive.org/details/reclaim-the-records-maryland-birth-certificates-1914-1922-sm-35-1/Reclaim_The_Records_-_Maryland_Birth_Certificates_-_1914-1922_-_SM35-sr3116/"
     );
 
     assert.equal(
-        lookupSeries("SM35-36")[0].url,
+        lookup({ series: "SM35-36" })[0].url,
         "https://archive.org/details/reclaim-the-records-maryland-birth-certificates-1914-1922-sm-35-36/Reclaim_The_Records_-_Maryland_Birth_Certificates_-_1914-1922_-_SM35-sr3679/"
     );
 
     assert.equal(
-        lookupSeries("SM35-72")[0].url,
+        lookup({ series: "SM35-72" })[0].url,
         "https://archive.org/details/reclaim-the-records-maryland-birth-certificates-1914-1922-sm-35-72/Reclaim_The_Records_-_Maryland_Birth_Certificates_-_1914-1922_-_SM35-sr3715/"
     );
 });
@@ -24,7 +24,7 @@ test("SM35-1, SM35-36, SM35-72 resolve to the exact given archive.org URLs", () 
 
 test("every SM35-1 through SM35-72 resolves to an archive.org URL", () => {
     for (let n = 1; n <= 72; n++) {
-        const results = lookupSeries(`SM35-${n}`);
+        const results = lookup({ series: `SM35-${n}` });
         assert.equal(results.length, 1, `SM35-${n} should resolve`);
         assert.ok(results[0].url.startsWith("https://archive.org/details/"));
     }
@@ -33,7 +33,7 @@ test("every SM35-1 through SM35-72 resolves to an archive.org URL", () => {
 
 test("SM35-33's irregular sr value (3676-A) is preserved verbatim in the URL", () => {
     assert.equal(
-        lookupSeries("SM35-33")[0].url,
+        lookup({ series: "SM35-33" })[0].url,
         "https://archive.org/details/reclaim-the-records-maryland-birth-certificates-1914-1922-sm-35-33/Reclaim_The_Records_-_Maryland_Birth_Certificates_-_1914-1922_-_SM35-sr3676-A/"
     );
 });
@@ -41,20 +41,20 @@ test("SM35-33's irregular sr value (3676-A) is preserved verbatim in the URL", (
 
 test("SM35-73 through SM35-269 resolve to the MSA guide URL pattern", () => {
     assert.equal(
-        lookupSeries("SM35-73")[0].url,
+        lookup({ series: "SM35-73" })[0].url,
         "https://guide.msa.maryland.gov/pages/item.aspx?ID=SM35-73"
     );
 
     assert.equal(
-        lookupSeries("SM35-269")[0].url,
+        lookup({ series: "SM35-269" })[0].url,
         "https://guide.msa.maryland.gov/pages/item.aspx?ID=SM35-269"
     );
 });
 
 
 test("SM35 number 0 or past 269 returns no results", () => {
-    assert.deepEqual(lookupSeries("SM35-0"), []);
-    assert.deepEqual(lookupSeries("SM35-270"), []);
+    assert.deepEqual(lookup({ series: "SM35-0" }), []);
+    assert.deepEqual(lookup({ series: "SM35-270" }), []);
 });
 
 
@@ -77,8 +77,8 @@ test("each year-search result carries the finding aid's own description as its l
 });
 
 
-test("lookupYear() only queries SM35 once per year, not once per month", () => {
-    const results = lookupYear({ location: "Talbot", year: 1918, recordType: "birth" });
+test("lookup() only queries SM35 once per year, not once per month", () => {
+    const results = lookup({ location: "Talbot", year: 1918, recordType: "birth" });
     assert.equal(results.length, 8);
 });
 

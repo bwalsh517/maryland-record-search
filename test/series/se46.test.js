@@ -1,7 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const { lookup, lookupYear, lookupSeries, lookupCertificate, listSeries } = require("../../src/index.js");
+const { lookup, listSeries } = require("../../src/index.js");
 
 
 test("date search resolves an unsplit county to a single record (Allegany, first jurisdiction alphabetically)", () => {
@@ -68,7 +68,7 @@ test("date search correctly skips an unassigned number that falls inside a juris
 
 
 test("series lookup: confirmed unassigned numbers resolve to an informative result with no URL", () => {
-    assert.deepEqual(lookupSeries("SE46-189")[0], {
+    assert.deepEqual(lookup({ series: "SE46-189" })[0], {
         series: "SE46",
         seriesType: "death",
         seriesHome: "http://guide.msa.maryland.gov/pages/series.aspx?action=viewseries&id=se46",
@@ -85,8 +85,8 @@ test("series lookup: confirmed unassigned numbers resolve to an informative resu
         approximatePageUrl: null
     });
 
-    assert.equal(lookupSeries("SE46-1606")[0].label, "Unassigned");
-    assert.equal(lookupSeries("SE46-1606")[0].url, null);
+    assert.equal(lookup({ series: "SE46-1606" })[0].label, "Unassigned");
+    assert.equal(lookup({ series: "SE46-1606" })[0].url, null);
 });
 
 
@@ -119,7 +119,7 @@ test("date/year search for 1988-2014 falls back to every record for that year, s
 
 
 test("lookupYear for 1988-2014 doesn't duplicate the statewide fallback across all 12 months", () => {
-    const results = lookupYear({ location: "Howard", year: 1999, recordType: "death" });
+    const results = lookup({ location: "Howard", year: 1999, recordType: "death" });
     const numbers = results.map(r => r.number);
 
     assert.equal(numbers.length, 86);
@@ -164,7 +164,7 @@ test("Worcester's late-files label does not apply outside December", () => {
 
 
 test("series lookup: SE46-645 (Dec 1974 Worcester) carries the late-files label too, found by number alone", () => {
-    const result = lookupSeries("SE46-645")[0];
+    const result = lookup({ series: "SE46-645" })[0];
 
     assert.equal(result.label, "Worcester (also includes late files for the year) Nos. 32104-32143");
     assert.ok(result.url);
@@ -213,7 +213,7 @@ test("March 1986 is a confirmed exception to alphabetical order - Prince George'
 
 
 test("certificate lookup resolves within the 1988 literal table", () => {
-    const results = lookupCertificate("1988-1");
+    const results = lookup({ certificateNumber: "1988-1" });
 
     assert.equal(results.length, 1);
     assert.equal(results[0].number, 4917);
@@ -222,7 +222,7 @@ test("certificate lookup resolves within the 1988 literal table", () => {
 
 
 test("certificate lookup rolls over to the next record correctly", () => {
-    assert.equal(lookupCertificate("1988-401")[0].number, 4918);
+    assert.equal(lookup({ certificateNumber: "1988-401" })[0].number, 4918);
 });
 
 
@@ -239,7 +239,7 @@ test("regression: 7 years have an oversized final lot (over 500 certs), not unde
     ];
 
     for (const [year, lastCert, expectedNumber] of affectedYears) {
-        const result = lookupCertificate(`${year}-${lastCert}`);
+        const result = lookup({ certificateNumber: `${year}-${lastCert}` });
         assert.equal(result.length, 1, `${year}-${lastCert} should resolve to exactly one record`);
         assert.equal(result[0].number, expectedNumber, `${year}'s last certificate should resolve to SE46-${expectedNumber}`);
         assert.ok(result[0].url, `${year}'s last record should have a real URL, not null from a nonexistent lot`);
@@ -249,7 +249,7 @@ test("regression: 7 years have an oversized final lot (over 500 certs), not unde
 
 test("certificate lookup matches the exact given page-jump example (SE46-5080, certs 1-4)", () => {
     const pages = [1, 2, 3, 4].map(cert => {
-        const url = lookupCertificate(`1990-${cert}`)[0].approximatePageUrl;
+        const url = lookup({ certificateNumber: `1990-${cert}` })[0].approximatePageUrl;
         return Number(url.match(/n(\d+)/)[1]);
     });
 
@@ -258,8 +258,8 @@ test("certificate lookup matches the exact given page-jump example (SE46-5080, c
 
 
 test("certificate lookup's page multiplier switches from x2 to x1 exactly at 2002 (certificate backs stop being scanned)", () => {
-    const page2001 = Number(lookupCertificate("2001-3")[0].approximatePageUrl.match(/n(\d+)/)[1]);
-    const page2002 = Number(lookupCertificate("2002-3")[0].approximatePageUrl.match(/n(\d+)/)[1]);
+    const page2001 = Number(lookup({ certificateNumber: "2001-3" })[0].approximatePageUrl.match(/n(\d+)/)[1]);
+    const page2002 = Number(lookup({ certificateNumber: "2002-3" })[0].approximatePageUrl.match(/n(\d+)/)[1]);
 
     assert.equal(page2001, 4);
     assert.equal(page2002, 2);
@@ -267,14 +267,14 @@ test("certificate lookup's page multiplier switches from x2 to x1 exactly at 200
 
 
 test("certificate lookup resolves 2013-2014 to the exact record via the MSA guide, with no page-jump link", () => {
-    const results2013 = lookupCertificate("2013-100");
+    const results2013 = lookup({ certificateNumber: "2013-100" });
 
     assert.equal(results2013.length, 1);
     assert.equal(results2013[0].number, 7032);
     assert.equal(results2013[0].url, "https://guide.msa.maryland.gov/pages/item.aspx?ID=SE46-7032");
     assert.equal(results2013[0].approximatePageUrl, null);
 
-    const results2014 = lookupCertificate("2014-45999");
+    const results2014 = lookup({ certificateNumber: "2014-45999" });
 
     assert.equal(results2014.length, 1);
     assert.equal(results2014[0].number, 7215);
@@ -285,13 +285,13 @@ test("certificate lookup resolves 2013-2014 to the exact record via the MSA guid
 
 test("certificate lookup handles 1990's 7 irregular middle lots as an explicit override", () => {
     // Cert 24700 falls inside SE46-5129's irregular range (24504-25004).
-    assert.equal(lookupCertificate("1990-24700")[0].number, 5129);
+    assert.equal(lookup({ certificateNumber: "1990-24700" })[0].number, 5129);
 });
 
 
 test("certificate lookup uses the standard formula outside 1990's irregular zone", () => {
     // Cert 23600 is well before the irregular block starts (24001).
-    assert.equal(lookupCertificate("1990-23600")[0].number, 5127);
+    assert.equal(lookup({ certificateNumber: "1990-23600" })[0].number, 5127);
 });
 
 
@@ -322,7 +322,7 @@ test("certificate lookup rejects malformed input", () => {
 
 test("series lookup: the 6065-6241 sub-range uses unpadded folder names, confirmed against a real file listing", () => {
     assert.equal(
-        lookupSeries("SE46-6153")[0].url,
+        lookup({ series: "SE46-6153" })[0].url,
         "https://archive.org/details/reclaim-the-records-maryland-death-certificates-msa-se-46-005977-6241/Reclaim_The_Records_-_Maryland_Death_Certificates_-_msa_se46_6153/"
     );
 });
@@ -330,7 +330,7 @@ test("series lookup: the 6065-6241 sub-range uses unpadded folder names, confirm
 
 test("series lookup: padding reverts to normal just before the unpadded sub-range starts", () => {
     assert.equal(
-        lookupSeries("SE46-6064")[0].url,
+        lookup({ series: "SE46-6064" })[0].url,
         "https://archive.org/details/reclaim-the-records-maryland-death-certificates-msa-se-46-005977-6241/Reclaim_The_Records_-_Maryland_Death_Certificates_-_msa_se46_006064/"
     );
 });
@@ -338,11 +338,11 @@ test("series lookup: padding reverts to normal just before the unpadded sub-rang
 
 test("series lookup: the unpadded numbering continues past the first collection, through the end of archive.org's 2012 coverage", () => {
     assert.equal(
-        lookupSeries("SE46-6300")[0].url,
+        lookup({ series: "SE46-6300" })[0].url,
         "https://archive.org/details/reclaim-the-records-maryland-death-certificates-msa-se-46-6242-6503/Reclaim_The_Records_-_Maryland_Death_Certificates_-_msa_se46_6300/"
     );
     assert.equal(
-        lookupSeries("SE46-7031")[0].url,
+        lookup({ series: "SE46-7031" })[0].url,
         "https://archive.org/details/reclaim-the-records-maryland-death-certificates-msa-se-46-6768-7031/Reclaim_The_Records_-_Maryland_Death_Certificates_-_msa_se46_7031/"
     );
 });
@@ -350,20 +350,20 @@ test("series lookup: the unpadded numbering continues past the first collection,
 
 test("series lookup: 2013-2014 (SE46-7032 to SE46-7215) resolve to the MSA guide, not archive.org", () => {
     assert.equal(
-        lookupSeries("SE46-7215")[0].url,
+        lookup({ series: "SE46-7215" })[0].url,
         "https://guide.msa.maryland.gov/pages/item.aspx?ID=SE46-7215"
     );
 });
 
 
 test("series lookup: the archive.org/MSA-guide boundary is exactly between SE46-7031 and SE46-7032", () => {
-    assert.ok(lookupSeries("SE46-7031")[0].url.startsWith("https://archive.org/"));
-    assert.ok(lookupSeries("SE46-7032")[0].url.startsWith("https://guide.msa.maryland.gov/"));
+    assert.ok(lookup({ series: "SE46-7031" })[0].url.startsWith("https://archive.org/"));
+    assert.ok(lookup({ series: "SE46-7032" })[0].url.startsWith("https://guide.msa.maryland.gov/"));
 });
 
 
 test("series lookup: SE46-4909 carries the Worcester-plus-late-files label", () => {
-    const result = lookupSeries("SE46-4909")[0];
+    const result = lookup({ series: "SE46-4909" })[0];
 
     assert.equal(result.label, "Worcester (also includes late files for the year) Nos. 37333-37454");
     assert.ok(result.url);
@@ -371,7 +371,7 @@ test("series lookup: SE46-4909 carries the Worcester-plus-late-files label", () 
 
 
 test("lookupYear covers a whole year within the verified range without duplicates", () => {
-    const results = lookupYear({ location: "Baltimore City", year: 1973, recordType: "death" });
+    const results = lookup({ location: "Baltimore City", year: 1973, recordType: "death" });
     const numbers = results.map(r => r.number);
 
     assert.equal(numbers.length, new Set(numbers).size, "no duplicate record numbers");

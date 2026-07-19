@@ -1,7 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const { lookup, lookupSeries, listSeries } = require("../../src/index.js");
+const { lookup, listSeries } = require("../../src/index.js");
 
 
 test("SE44-1 (first record) is Allegany, Jul 1951", () => {
@@ -61,23 +61,23 @@ test("Saint Mary's Jan 1969 still consumes two record numbers even though the se
 
 test("SE44's computed archiveUrl blocks records in chunks of 1000", () => {
     assert.equal(
-        lookupSeries("SE44-1")[0].url,
+        lookup({ series: "SE44-1" })[0].url,
         "https://archive.org/details/reclaim-the-records-maryland-death-certificates-msa-se-44-000001/Reclaim_The_Records_-_Maryland_Death_Certificates_-_msa_se44_000001/"
     );
 
     assert.equal(
-        lookupSeries("SE44-999")[0].url,
+        lookup({ series: "SE44-999" })[0].url,
         "https://archive.org/details/reclaim-the-records-maryland-death-certificates-msa-se-44-000001/Reclaim_The_Records_-_Maryland_Death_Certificates_-_msa_se44_000999/"
     );
 
     // 1000 is the last number of the first block, not the first of the second.
     assert.equal(
-        lookupSeries("SE44-1000")[0].url,
+        lookup({ series: "SE44-1000" })[0].url,
         "https://archive.org/details/reclaim-the-records-maryland-death-certificates-msa-se-44-000001/Reclaim_The_Records_-_Maryland_Death_Certificates_-_msa_se44_001000/"
     );
 
     assert.equal(
-        lookupSeries("SE44-1001")[0].url,
+        lookup({ series: "SE44-1001" })[0].url,
         "https://archive.org/details/reclaim-the-records-maryland-death-certificates-msa-se-44-001001/Reclaim_The_Records_-_Maryland_Death_Certificates_-_msa_se44_001001/"
     );
 });
@@ -85,7 +85,7 @@ test("SE44's computed archiveUrl blocks records in chunks of 1000", () => {
 
 test("SE44-5021's URL falls in the 5001 block, matching the last generated record", () => {
     assert.equal(
-        lookupSeries("SE44-5021")[0].url,
+        lookup({ series: "SE44-5021" })[0].url,
         "https://archive.org/details/reclaim-the-records-maryland-death-certificates-msa-se-44-005001/Reclaim_The_Records_-_Maryland_Death_Certificates_-_msa_se44_005021/"
     );
 });
@@ -95,10 +95,10 @@ test("SE44-5021's URL falls in the 5001 block, matching the last generated recor
 // has no bound of its own - seriesIdRange is what actually rejects a
 // number the series never generated (0, or anything past 5021).
 test("SE44 series-ID lookup rejects numbers outside seriesIdRange", () => {
-    assert.equal(lookupSeries("SE44-0").length, 0);
-    assert.equal(lookupSeries("SE44-1").length, 1);
-    assert.equal(lookupSeries("SE44-5021").length, 1);
-    assert.equal(lookupSeries("SE44-99999").length, 0);
+    assert.equal(lookup({ series: "SE44-0" }).length, 0);
+    assert.equal(lookup({ series: "SE44-1" }).length, 1);
+    assert.equal(lookup({ series: "SE44-5021" }).length, 1);
+    assert.equal(lookup({ series: "SE44-99999" }).length, 0);
 });
 
 
