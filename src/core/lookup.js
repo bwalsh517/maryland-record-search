@@ -248,17 +248,12 @@ if (typeof require !== "undefined") {
      * series don't support this at all - see listSeries()'s
      * supportsCertificateNumberSearch field to check ahead of time.
      *
-     * Parses certificateNumber's optional embedded "YYYY-" prefix
-     * once, here, via the same BaseSeries.splitCertificateQuery() a
-     * series would otherwise call itself (it doesn't use `this`, so
-     * it's callable unbound, off the prototype, without an instance) -
-     * a series never sees a year-prefixed string; it always receives
-     * the bare rest and a resolved year (or null) as two separate
-     * arguments. options.year is only consulted when the string has
-     * no prefix of its own; an embedded prefix always wins. If both
-     * are present and disagree, that's an unresolvable query (two
-     * different claimed years for the same certificate) and this
-     * returns [] rather than guessing.
+     * Resolving certificateNumber's optional embedded "YYYY-" prefix
+     * against a separately provided year (if any) is
+     * BaseSeries.resolveCertificateQuery()'s job, not this function's -
+     * this just calls it and returns [] if it comes back null (an
+     * unresolvable query, e.g. two disagreeing years for the same
+     * certificate) rather than guessing.
      *
      * Not part of the public API - lookup({ certificateNumber, ... })
      * calls this internally, passing its own options object straight
@@ -270,14 +265,11 @@ if (typeof require !== "undefined") {
 
         try {
 
-            const { year: parsedYear, rest } =
-                ns.BaseSeries.prototype.splitCertificateQuery(certificateNumber);
+            const resolved = ns.BaseSeries.resolveCertificateQuery(certificateNumber, year);
 
-            if (parsedYear !== null && year != null && Number(year) !== parsedYear) {
+            if (!resolved) {
                 return [];
             }
-
-            const effectiveYear = parsedYear !== null ? parsedYear : (year != null ? Number(year) : null);
 
             const candidates = ns.SERIES.filter(series =>
                 (!recordType || series.seriesType === recordType) &&
@@ -285,7 +277,7 @@ if (typeof require !== "undefined") {
             );
 
             return sortByWeight(candidates.flatMap(series =>
-                series.lookupCertificateNumber(rest, effectiveYear)
+                series.lookupCertificateNumber(resolved.certificateNumber, resolved.year)
             ));
 
         } catch {
