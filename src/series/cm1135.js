@@ -75,6 +75,13 @@ if (typeof require !== "undefined") {
             // certificate coverage.
             this.certificateSearchRange = { startYear: 1875, startMonth: 1, endYear: 1947, endMonth: 12 };
 
+            // Every scanned item in this series has 4 non-certificate
+            // pages (title page, index, etc.) before the certificates
+            // actually start - confirmed directly against the scans.
+            // See DATE_CERT_RECORDS entries' own pageNumberStart for a
+            // record whose item is confirmed to differ.
+            this.pageNumberStart = 4;
+
             // Standard 50-file-per-collection range table, same shape
             // as CM1132/CE502 - no archiveUrl() override needed for
             // this portion. CM1135-151 through CM1135-670 have no
@@ -293,18 +300,17 @@ if (typeof require !== "undefined") {
                             number === segment.end ? segment.endSuffix : null;
 
                     // Same page-jump math as CM1132: one certificate per
-                    // scanned page, first certificate in the range lands
-                    // on page 1 (position 1, minus 1, floored at 1 - see
-                    // CM1132's own lookupCertificateNumber() for why the
-                    // floor exists). Only meaningful when this record has
-                    // a real archive.org scan (findArchiveRange() is the
-                    // same check BaseSeries.archiveUrl() uses internally
-                    // to decide between a scan link and the MSA guide
+                    // scanned page after the item's leading pages (see
+                    // pageForPosition() on BaseSeries and this.pageNumberStart
+                    // above). Only meaningful when this record has a real
+                    // archive.org scan (findArchiveRange() is the same
+                    // check BaseSeries.archiveUrl() uses internally to
+                    // decide between a scan link and the MSA guide
                     // fallback) - CM1135-151 onward has no scan to jump
                     // into, so no page link is possible there regardless
                     // of the certificate number searched for.
-                    const position = number - segment.start + 1;
-                    const page = Math.max(1, position - 1);
+                    const position = number - segment.start;
+                    const page = this.pageForPosition(position, record.pageNumberStart);
 
                     results.push(this.createResult({
                         location: "Baltimore City",

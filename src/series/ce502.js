@@ -58,6 +58,12 @@ if (typeof require !== "undefined") {
 
             this.seriesIdRange = { start: 1, end: 600 };
 
+            // No leading pages before the first certificate in this
+            // series' scans - stated explicitly even though it matches
+            // BaseSeries's own default, so every series' page-jump
+            // assumptions are visible in one place.
+            this.pageNumberStart = 0;
+
             this.ARCHIVE_RANGES = [
                 { start: 1, end: 94, collection: "reclaim-the-records-baltimore-city-death-certificates-msa-ce-502-000001-94", prefix: "Reclaim_The_Records_-_Baltimore_City_Death_Certificates_-_msa_ce502_", padding: 6 },
                 { start: 95, end: 387, collection: "reclaim-the-records-baltimore-city-death-certificates-msa-ce-502-000095-387", prefix: "Reclaim_The_Records_-_Baltimore_City_Death_Certificates_-_msa_ce502_", padding: 6 },
@@ -124,8 +130,11 @@ if (typeof require !== "undefined") {
          * special-casing here.
          *
          * Page-jump math matches SE46's pre-2002 (backs-scanned) era:
-         * certificates are on every other page, the first certificate
-         * in a record's range sits at page 0.
+         * certificates are on every other page - always, not
+         * year-conditional the way SE46's is, since this series' whole
+         * date range (1950-1972) falls in that same backs-scanned era.
+         * this.pageNumberStart (0) is BaseSeries.pageForPosition()'s
+         * separate starting-offset concern, unrelated to this gap.
          *
          * year is required here (this series' numbers reset every
          * year, so a bare number alone is meaningless) - lookup.js
@@ -174,7 +183,7 @@ if (typeof require !== "undefined") {
                 }
 
                 const position = cert - record.certStart;
-                const page = position * 2;
+                const page = this.pageForPosition(position * 2);
 
                 const certLabel = record.certLabel || `Nos. ${record.certStart}-${record.certEnd}`;
 

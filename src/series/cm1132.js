@@ -77,6 +77,13 @@ if (typeof require !== "undefined") {
 
             this.seriesIdRange = { start: 1, end: 248 };
 
+            // Every scanned item in this series has 6 non-certificate
+            // pages (title page, index, etc.) before the certificates
+            // actually start - confirmed directly against the scans.
+            // See DATE_CERT_RECORDS entries' own pageNumberStart for a
+            // record whose item is confirmed to differ.
+            this.pageNumberStart = 6;
+
             this.ARCHIVE_RANGES = [
                 { start: 1, end: 30, collection: "reclaim-the-records-baltimore-city-death-certificates-1875-1921-msa-cm-1132-00001-30", prefix: "Reclaim_The_Records_-_Baltimore_City_Death_Certificates_1875-1921_-_msa_cm1132_-_", padding: 5 },
                 { start: 31, end: 31, collection: "reclaim-the-records-baltimore-city-death-certificates-1875-1921-msa-cm-1132-0031", prefix: null, padding: null },
@@ -483,13 +490,13 @@ if (typeof require !== "undefined") {
          *
          * Also computes an approximate deep link to the right page
          * within that item, assuming roughly one certificate per
-         * scanned page (based on one known anchor point: the 334th
-         * certificate in a given record's range corresponds to that
-         * item's page 333). This is a rough estimate, not a precise
-         * lookup - if it overshoots the item's actual page count,
-         * archive.org's viewer just lands on page 1 instead of
-         * breaking, so an imprecise estimate is harmless, just less
-         * useful for certificates near the end of a large range.
+         * scanned page after the item's leading pages (see
+         * pageForPosition() on BaseSeries and this.pageNumberStart
+         * above). This is a rough estimate, not a precise lookup - if
+         * it overshoots the item's actual page count, archive.org's
+         * viewer just lands on page 1 instead of breaking, so an
+         * imprecise estimate is harmless, just less useful for
+         * certificates near the end of a large range.
          */
         lookupCertificateNumber(rest, year = null) {
 
@@ -517,8 +524,8 @@ if (typeof require !== "undefined") {
                 return [];
             }
 
-            const position = linear - record.cert.startLinear + 1;
-            const page = Math.max(1, position - 1);
+            const position = linear - record.cert.startLinear;
+            const page = this.pageForPosition(position, record.pageNumberStart);
 
             // Record 31's collection isn't one continuous scan like every other
             // record - it's split into several smaller files, each covering only
