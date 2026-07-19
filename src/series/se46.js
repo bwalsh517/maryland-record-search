@@ -87,11 +87,13 @@ if (typeof require !== "undefined") {
     }
 
     /**
-     * SE46's own numbers reset every year, so once BaseSeries.
-     * splitCertificateQuery() has split off the "YYYY-" prefix (see
-     * lookupCertificateNumber() below, which requires it - a bare
-     * number would be ambiguous), all that's left to check here is
-     * that what remains is a plain positive integer.
+     * SE46's own numbers reset every year, so once lookup.js's
+     * lookupCertificate() has split off the "YYYY-" prefix via
+     * BaseSeries.splitCertificateQuery() before this series is even
+     * chosen (a bare number would be ambiguous - see
+     * lookupCertificateNumber() below, which requires a resolved
+     * year), all that's left to check here is that what remains is a
+     * plain positive integer.
      */
     function parseCertificateNumber(rest) {
 
@@ -331,10 +333,12 @@ if (typeof require !== "undefined") {
          * but point at the MSA guide entry rather than a scanned page,
          * and carry no approximatePageUrl, since there's no scan to
          * page-jump into.
+         *
+         * year is required here - lookup.js already resolved it (from
+         * an embedded "YYYY-" prefix or a separate year field) before
+         * calling this.
          */
-        lookupCertificateNumber(input) {
-
-            const { year, rest } = this.splitCertificateQuery(input);
+        lookupCertificateNumber(rest, year = null) {
 
             if (year === null) {
                 return [];

@@ -277,11 +277,14 @@ if (typeof require !== "undefined") {
          * "A-1234", kept for backward compatibility with CM1132's
          * original input format - harmless for a series with no
          * letters at all, since the dash just won't match anything and
-         * passes through untouched). What a subclass does with the
-         * remainder is not shared: whether the year is required or
-         * optional, whether it's a plain number or has its own letter
-         * scheme, is all series-specific and stays in each series'
-         * own lookupCertificateNumber().
+         * passes through untouched).
+         *
+         * Doesn't reference `this` - kept as a real (instance) method
+         * anyway since it's still useful to a custom series built
+         * directly against BaseSeries, outside lookup()'s own
+         * dispatch. resolveCertificateQuery() below is what lookup.js
+         * actually calls; it builds on this rather than duplicating
+         * the parsing itself.
          *
          * @param {string} input - Raw certificate query, e.g. "1995-1234" or "A-1234".
          * @returns {{year: ?number, rest: string}}
@@ -305,21 +308,71 @@ if (typeof require !== "undefined") {
 
 
         /**
+         * What lookup.js's lookupCertificate() actually calls, once,
+         * before any series is even chosen - resolves a certificate
+         * query down to the two things a series' own
+         * lookupCertificateNumber(certificateNumber, year) needs,
+         * without lookup() itself needing to know anything about the
+         * "YYYY-" prefix convention that's really a BaseSeries-level
+         * fact, not a lookup.js-level one.
+         *
+         * A separate year is only consulted when certificateNumber has
+         * no embedded prefix of its own; an embedded prefix always
+         * wins. If both are present and disagree, that's an
+         * unresolvable query (two different claimed years for the same
+         * certificate) - returns null rather than guessing, which the
+         * caller turns into [] the same way it would for any other
+         * over-specified query that matches nothing.
+         *
+         * static rather than an instance method, since every series
+         * currently shares this exact convention - there's nothing yet
+         * to vary per series instance. If a future series (e.g. a
+         * custom one registered via the still-unbuilt open series
+         * registration) ever needs a genuinely different certificate
+         * format, that's the point where this would need to become an
+         * overridable instance method instead of one shared static.
+         *
+         * @param {string} certificateNumber - Raw certificate query, possibly "YYYY-" prefixed.
+         * @param {?number} [year] - A separately provided year, if any.
+         * @returns {?{certificateNumber: string, year: ?number}} The resolved query, or null on conflict.
+         */
+        static resolveCertificateQuery(certificateNumber, year) {
+
+            const { year: parsedYear, rest } = BaseSeries.prototype.splitCertificateQuery(certificateNumber);
+
+            if (parsedYear !== null && year != null && Number(year) !== parsedYear) {
+                return null;
+            }
+
+            return {
+                certificateNumber: rest,
+                year: parsedYear !== null ? parsedYear : (year != null ? Number(year) : null)
+            };
+        }
+
+
+        /**
          * Only some series (currently CM1132, CM1135, SE46, CE502) are
          * numbered in a way that a specific certificate/record number
-         * can be looked up directly, independent of location or date -
-         * see splitCertificateQuery() above for the shared part of
-         * parsing one. A series with no such numbering just returns no
-         * results here. Check listSeries()'s
-         * supportsCertificateNumberSearch field to know ahead of time
-         * whether a series supports this.
+         * can be looked up directly, independent of location or date.
+         * A series with no such numbering just returns no results
+         * here. Check listSeries()'s supportsCertificateNumberSearch
+         * field to know ahead of time whether a series supports this.
+         *
+         * certificateNumber arrives already year-stripped - any
+         * "YYYY-" prefix a caller supplied was parsed and resolved by
+         * lookup.js's lookupCertificate() (via resolveCertificateQuery()
+         * above) before a series is even chosen, not by the series
+         * itself. year is that resolved value, or null if none was
+         * ever provided.
          *
          * Subclasses that support certificate-number search override this.
          *
-         * @param {string} _certificateNumber - Raw certificate/record number.
+         * @param {string} _certificateNumber - Certificate/record number, with no year prefix.
+         * @param {?number} _year - Resolved year, or null if none was given.
          * @returns {Array.<LookupResult>} Matching results, possibly empty.
          */
-        lookupCertificateNumber(_certificateNumber) {
+        lookupCertificateNumber(_certificateNumber, _year = null) {
             return [];
         }
 

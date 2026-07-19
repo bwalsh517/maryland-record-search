@@ -297,7 +297,7 @@ test("certificate lookup uses the standard formula outside 1990's irregular zone
 
 test("certificate lookup rejects a certificate number below 1", () => {
     const se46 = require("../../src/series/se46.js");
-    assert.deepEqual(se46.lookupCertificateNumber("1990-0"), []);
+    assert.deepEqual(se46.lookupCertificateNumber("0", 1990), []);
 });
 
 

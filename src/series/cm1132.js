@@ -18,9 +18,9 @@ if (typeof require !== "undefined") {
     /**
      * "LETTER?NUMBER" - e.g. "B45678", no letter for the earliest
      * block. The optional "YYYY-" prefix and legacy "A-1234" dash
-     * style are already stripped by the time this runs - see
-     * BaseSeries.splitCertificateQuery(), called from
-     * lookupCertificateNumber() below.
+     * style are already stripped by the time this runs - lookup.js's
+     * lookupCertificate() does that via BaseSeries.splitCertificateQuery()
+     * before this series is even chosen.
      */
     function parseLetterNumber(rest) {
 
@@ -471,13 +471,15 @@ if (typeof require !== "undefined") {
          * sequence across the whole series (not per-county or per-year
          * like the other series' record numbers), so a specific
          * certificate number can be looked up directly to find which
-         * scanned item it's in - see parseLetterNumber() above and
-         * BaseSeries.splitCertificateQuery() for the input format
+         * scanned item it's in - see parseLetterNumber() above
          * ("B45678", case-insensitive, no letter for the earliest
-         * block; an optional "YYYY-" prefix is accepted for
-         * consistency with CM1135's certificate search, and validated
-         * against the record's actual date if given, even though no
-         * letter here is ever reused the way CM1135's are).
+         * block). An optional "YYYY-" prefix is accepted for
+         * consistency with CM1135's certificate search - already
+         * parsed and stripped by lookup.js's lookupCertificate() by
+         * the time this runs (see BaseSeries.splitCertificateQuery()),
+         * so year arrives here as a resolved value (or null), and is
+         * validated against the record's actual date if given, even
+         * though no letter here is ever reused the way CM1135's are.
          *
          * Also computes an approximate deep link to the right page
          * within that item, assuming roughly one certificate per
@@ -489,9 +491,8 @@ if (typeof require !== "undefined") {
          * breaking, so an imprecise estimate is harmless, just less
          * useful for certificates near the end of a large range.
          */
-        lookupCertificateNumber(certificateNumber) {
+        lookupCertificateNumber(rest, year = null) {
 
-            const { year, rest } = this.splitCertificateQuery(certificateNumber);
             const linear = parseLetterNumber(rest);
 
             if (linear === null) {

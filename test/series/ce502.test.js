@@ -188,9 +188,9 @@ test("certificate search with the letter suffix is case-insensitive", () => {
 
 test("certificate search rejects a letter that doesn't match any known duplicate, rather than guessing", () => {
     // Wrong letter on the real duplicate.
-    assert.deepEqual(ce502.lookupCertificateNumber("1952-3000B"), []);
+    assert.deepEqual(ce502.lookupCertificateNumber("3000B", 1952), []);
     // A letter on a number that has no duplicate at all.
-    assert.deepEqual(ce502.lookupCertificateNumber("1950-501A"), []);
+    assert.deepEqual(ce502.lookupCertificateNumber("501A", 1950), []);
 });
 
 
