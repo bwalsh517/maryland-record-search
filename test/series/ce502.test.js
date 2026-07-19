@@ -1,19 +1,19 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const { lookup, lookupYear, lookupSeries, lookupCertificate, listSeries, SERIES } = require("../../src/index.js");
+const { lookup, listSeries, SERIES } = require("../../src/index.js");
 
 const ce502 = SERIES.find(s => s.name === "CE502");
 
 
 test("CE502-1 and CE502-94 resolve within the 1-94 archive.org chunk", () => {
     assert.equal(
-        lookupSeries("CE502-1")[0].url,
+        lookup({ series: "CE502-1" })[0].url,
         "https://archive.org/details/reclaim-the-records-baltimore-city-death-certificates-msa-ce-502-000001-94/Reclaim_The_Records_-_Baltimore_City_Death_Certificates_-_msa_ce502_000001/"
     );
 
     assert.equal(
-        lookupSeries("CE502-94")[0].url,
+        lookup({ series: "CE502-94" })[0].url,
         "https://archive.org/details/reclaim-the-records-baltimore-city-death-certificates-msa-ce-502-000001-94/Reclaim_The_Records_-_Baltimore_City_Death_Certificates_-_msa_ce502_000094/"
     );
 });
@@ -21,7 +21,7 @@ test("CE502-1 and CE502-94 resolve within the 1-94 archive.org chunk", () => {
 
 test("CE502-95 correctly rolls into the 95-387 chunk, not the 1-94 chunk", () => {
     assert.equal(
-        lookupSeries("CE502-95")[0].url,
+        lookup({ series: "CE502-95" })[0].url,
         "https://archive.org/details/reclaim-the-records-baltimore-city-death-certificates-msa-ce-502-000095-387/Reclaim_The_Records_-_Baltimore_City_Death_Certificates_-_msa_ce502_000095/"
     );
 });
@@ -29,12 +29,12 @@ test("CE502-95 correctly rolls into the 95-387 chunk, not the 1-94 chunk", () =>
 
 test("CE502-387 and CE502-388 straddle the 95-387 / 388-523 chunk boundary correctly", () => {
     assert.equal(
-        lookupSeries("CE502-387")[0].url,
+        lookup({ series: "CE502-387" })[0].url,
         "https://archive.org/details/reclaim-the-records-baltimore-city-death-certificates-msa-ce-502-000095-387/Reclaim_The_Records_-_Baltimore_City_Death_Certificates_-_msa_ce502_000387/"
     );
 
     assert.equal(
-        lookupSeries("CE502-388")[0].url,
+        lookup({ series: "CE502-388" })[0].url,
         "https://archive.org/details/reclaim-the-records-baltimore-city-death-certificates-msa-ce-502-000388-523/Reclaim_The_Records_-_Baltimore_City_Death_Certificates_-_msa_ce502_000388/"
     );
 });
@@ -42,12 +42,12 @@ test("CE502-387 and CE502-388 straddle the 95-387 / 388-523 chunk boundary corre
 
 test("CE502-523 and CE502-524 straddle the 388-523 / 524-600 chunk boundary correctly", () => {
     assert.equal(
-        lookupSeries("CE502-523")[0].url,
+        lookup({ series: "CE502-523" })[0].url,
         "https://archive.org/details/reclaim-the-records-baltimore-city-death-certificates-msa-ce-502-000388-523/Reclaim_The_Records_-_Baltimore_City_Death_Certificates_-_msa_ce502_000523/"
     );
 
     assert.equal(
-        lookupSeries("CE502-524")[0].url,
+        lookup({ series: "CE502-524" })[0].url,
         "https://archive.org/details/reclaim-the-records-baltimore-city-death-certificates-msa-ce-502-000524-600/Reclaim_The_Records_-_Baltimore_City_Death_Certificates_-_msa_ce502_000524/"
     );
 });
@@ -55,15 +55,15 @@ test("CE502-523 and CE502-524 straddle the 388-523 / 524-600 chunk boundary corr
 
 test("CE502-600 is the last record, correctly in the 524-600 chunk", () => {
     assert.equal(
-        lookupSeries("CE502-600")[0].url,
+        lookup({ series: "CE502-600" })[0].url,
         "https://archive.org/details/reclaim-the-records-baltimore-city-death-certificates-msa-ce-502-000524-600/Reclaim_The_Records_-_Baltimore_City_Death_Certificates_-_msa_ce502_000600/"
     );
 });
 
 
 test("CE502 number 0 or past 600 returns no results", () => {
-    assert.deepEqual(lookupSeries("CE502-0"), []);
-    assert.deepEqual(lookupSeries("CE502-601"), []);
+    assert.deepEqual(lookup({ series: "CE502-0" }), []);
+    assert.deepEqual(lookup({ series: "CE502-601" }), []);
 });
 
 
@@ -122,11 +122,11 @@ test("date search returns a record spanning two months for either month it cover
 });
 
 
-test("lookupYear() shows every record exactly once, in order, for a year with several multi-month records", () => {
+test("lookup() shows every record exactly once, in order, for a year with several multi-month records", () => {
     // 1951, not 1950 - 1950 also picks up CM1132-248 from the genuine
     // boundary overlap covered above, which isn't what this test is
     // checking for.
-    const results = lookupYear({ location: "Baltimore City", year: 1951, recordType: "death" });
+    const results = lookup({ location: "Baltimore City", year: 1951, recordType: "death" });
     const numbers = results.map(r => r.number);
 
     assert.equal(numbers.length, new Set(numbers).size, "no duplicate record numbers");
@@ -138,14 +138,14 @@ test("certificate search resolves a normal (non-duplicate) certificate to its re
     // CE502-2: Nos. 501-1000, so certificate 501 is the first in the
     // record - page 0, 2 pages/cert (backs scanned, same as SE46's
     // pre-2002 era).
-    const results = lookupCertificate("1950-501", { recordType: "death" });
+    const results = lookup({ certificateNumber: "1950-501", recordType: "death" });
 
     assert.equal(results.length, 1);
     assert.equal(results[0].number, 2);
     assert.equal(results[0].approximatePageUrl.endsWith("page/n0/mode/1up"), true);
 
     // Certificate 502 - one position later, so 2 pages further in.
-    const next = lookupCertificate("1950-502", { recordType: "death" });
+    const next = lookup({ certificateNumber: "1950-502", recordType: "death" });
     assert.equal(next[0].approximatePageUrl.endsWith("page/n2/mode/1up"), true);
 });
 
@@ -155,7 +155,7 @@ test("certificate search returns BOTH records for the confirmed duplicate 3000 i
     // second, "A"-labeled 3000) both genuinely contain 3000 - see
     // ce502-data.js's header comment. The caller shouldn't need to
     // know to type "3000A" to find the second one.
-    const results = lookupCertificate("1952-3000", { recordType: "death" });
+    const results = lookup({ certificateNumber: "1952-3000", recordType: "death" });
 
     assert.equal(results.length, 2);
     assert.deepEqual(results.map(r => r.number).sort((a, b) => a - b), [52, 53]);
@@ -169,7 +169,7 @@ test("certificate search returns BOTH records for the confirmed duplicate 3000 i
 
 
 test("certificate search returns just CE502-53 when the caller explicitly asks for the \"A\" duplicate", () => {
-    const results = lookupCertificate("1952-3000A", { recordType: "death" });
+    const results = lookup({ certificateNumber: "1952-3000A", recordType: "death" });
 
     assert.equal(results.length, 1);
     assert.equal(results[0].number, 53);
@@ -179,8 +179,8 @@ test("certificate search returns just CE502-53 when the caller explicitly asks f
 
 
 test("certificate search with the letter suffix is case-insensitive", () => {
-    const upper = lookupCertificate("1952-3000A", { recordType: "death" });
-    const lower = lookupCertificate("1952-3000a", { recordType: "death" });
+    const upper = lookup({ certificateNumber: "1952-3000A", recordType: "death" });
+    const lower = lookup({ certificateNumber: "1952-3000a", recordType: "death" });
 
     assert.deepEqual(upper, lower);
 });
@@ -196,13 +196,13 @@ test("certificate search rejects a letter that doesn't match any known duplicate
 
 test("certificate search correctly returns nothing for a certificate number that doesn't exist that year", () => {
     // 1950 tops out at 11327 (CE502-23).
-    assert.deepEqual(lookupCertificate("1950-11328", { recordType: "death" }), []);
+    assert.deepEqual(lookup({ certificateNumber: "1950-11328", recordType: "death" }), []);
 });
 
 
 test("certificate search rejects malformed input", () => {
     // Checked against the CE502 instance directly, not the global
-    // lookupCertificate() - a bare "3000" is valid input for CM1132's
+    // lookup({ certificateNumber }) - a bare "3000" is valid input for CM1132's
     // own (unrelated) numbering scheme, so it isn't malformed from the
     // global function's point of view, only from CE502's.
     assert.deepEqual(ce502.lookupCertificateNumber("3000"), []);
@@ -214,7 +214,7 @@ test("certificate search rejects malformed input", () => {
 test("certificate search resets correctly at a year boundary", () => {
     // 1950's last record (CE502-23) ends at 11327; 1951 restarts at 1
     // on CE502-24, not a continuation of 1950's numbering.
-    const results = lookupCertificate("1951-1", { recordType: "death" });
+    const results = lookup({ certificateNumber: "1951-1", recordType: "death" });
 
     assert.equal(results.length, 1);
     assert.equal(results[0].number, 24);

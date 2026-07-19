@@ -1,7 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const { lookup, lookupYear, lookupSeries, listSeries } = require("../../src/index.js");
+const { lookup, listSeries } = require("../../src/index.js");
 
 
 test("lookup() with no matching options returns an empty array", () => {
@@ -24,25 +24,25 @@ test("lookup() never throws on a garbage series ID", () => {
 });
 
 
-test("lookupSeries() matches series names exactly, not by prefix", () => {
+test("lookup({ series }) matches series names exactly, not by prefix", () => {
     // SE43 and SE45 share the prefix "SE4"; a naive startsWith() match
     // could misroute one to the other's regex, silently returning no
     // results for a well-formed ID.
-    const se43Result = lookupSeries("SE43-1");
-    const se45Result = lookupSeries("SE45-1");
+    const se43Result = lookup({ series: "SE43-1" });
+    const se45Result = lookup({ series: "SE45-1" });
 
     assert.equal(se43Result[0].series, "SE43");
     assert.equal(se45Result[0].series, "SE45");
 });
 
 
-test("lookupSeries() returns an empty array for an ID with no matching series", () => {
-    assert.deepEqual(lookupSeries("ZZ99-1"), []);
+test("lookup({ series }) returns an empty array for an ID with no matching series", () => {
+    assert.deepEqual(lookup({ series: "ZZ99-1" }), []);
 });
 
 
-test("lookupSeries() returns an empty array for an ID with no dash", () => {
-    assert.deepEqual(lookupSeries("SE43"), []);
+test("lookup({ series }) returns an empty array for an ID with no dash", () => {
+    assert.deepEqual(lookup({ series: "SE43" }), []);
 });
 
 
@@ -53,7 +53,7 @@ test("a series with no location/date search implemented returns no results, not 
     const results = lookup({ location: "Talbot", month: 1, year: 2020 });
     assert.deepEqual(results, []);
 
-    const yearResults = lookupYear({ location: "Talbot", year: 2020 });
+    const yearResults = lookup({ location: "Talbot", year: 2020 });
     assert.deepEqual(yearResults, []);
 });
 
@@ -111,21 +111,14 @@ test("listSeries() reports an accurate dateRange for every series, matching what
 });
 
 
-test("lookup() with location + year but no month delegates to lookupYear()", () => {
-    const viaLookup = lookup({ location: "Worcester", year: 1924 });
-    const viaLookupYear = lookupYear({ location: "Worcester", year: 1924 });
-
-    assert.deepEqual(viaLookup, viaLookupYear);
-});
-
-
-test("lookupYear() collapses a year-filed record to a single result instead of 12 duplicates", () => {
+test("lookup() with location + year (month omitted) collapses a year-filed record to a single result instead of 12 duplicates", () => {
     // Worcester 1924 is filed as one file covering the whole year in
     // SE43's index (the same record repeats under every month key
-    // internally) - lookupYear() should dedupe that down to one entry.
-    // Filtered to death records specifically, since SM35 (birth) now
-    // also covers 1924 for every county via its own year-level search.
-    const results = lookupYear({ location: "Worcester", year: 1924, recordType: "death" });
+    // internally) - the year-only path should dedupe that down to one
+    // entry. Filtered to death records specifically, since SM35 (birth)
+    // now also covers 1924 for every county via its own year-level
+    // search.
+    const results = lookup({ location: "Worcester", year: 1924, recordType: "death" });
 
     assert.equal(results.length, 1);
     assert.equal(results[0].series, "SE43");
@@ -134,16 +127,16 @@ test("lookupYear() collapses a year-filed record to a single result instead of 1
 });
 
 
-test("lookupYear() returns one entry per month for a monthly-filed county, in month order", () => {
-    const results = lookupYear({ location: "Anne Arundel", year: 1969 });
+test("lookup() with location + year (month omitted) returns one entry per month for a monthly-filed county, in month order", () => {
+    const results = lookup({ location: "Anne Arundel", year: 1969 });
 
     assert.equal(results.length, 12);
     assert.deepEqual(results.map(r => r.month), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]);
 });
 
 
-test("lookupYear() correctly spans a mid-year series transition (SE44 -> SE45 in 1969)", () => {
-    const results = lookupYear({ location: "Anne Arundel", year: 1969 });
+test("lookup() with location + year (month omitted) correctly spans a mid-year series transition (SE44 -> SE45 in 1969)", () => {
+    const results = lookup({ location: "Anne Arundel", year: 1969 });
 
     const seriesByMonth = Object.fromEntries(results.map(r => [r.month, r.series]));
 
@@ -152,14 +145,14 @@ test("lookupYear() correctly spans a mid-year series transition (SE44 -> SE45 in
 });
 
 
-test("lookupYear() returns an empty array without a location", () => {
-    assert.deepEqual(lookupYear({ year: 1969 }), []);
+test("lookup() with year but no location returns an empty array", () => {
+    assert.deepEqual(lookup({ year: 1969 }), []);
 });
 
 
-test("lookupYear() never throws on an unrecognized location", () => {
+test("lookup() never throws on an unrecognized location (year-only search)", () => {
     assert.doesNotThrow(() => {
-        assert.deepEqual(lookupYear({ location: "Not A Real County", year: 1969 }), []);
+        assert.deepEqual(lookup({ location: "Not A Real County", year: 1969 }), []);
     });
 });
 
@@ -178,4 +171,31 @@ test("lookup() with numeric code 30 routes the same way the literal 'Baltimore C
     const byName = lookup({ location: "Baltimore City", month: 6, year: 1920, recordType: "death" });
 
     assert.deepEqual(byCode, byName);
+});
+
+
+test("lookup() with certificateNumber + a separate year field combines them when no prefix is embedded", () => {
+    // A50000 is ambiguous on its own - CM1135's "A" letter block cycles
+    // twice (1893 and 1909, see cm1135.test.js) - so this also proves
+    // the separate year field actually narrows the search, not just
+    // that it's accepted.
+    const viaSeparateYear = lookup({ certificateNumber: "A50000", year: 1893, recordType: "birth" });
+    const viaEmbeddedPrefix = lookup({ certificateNumber: "1893-A50000", recordType: "birth" });
+
+    assert.deepEqual(viaSeparateYear.map(r => r.number), [37]);
+    assert.deepEqual(viaSeparateYear, viaEmbeddedPrefix);
+});
+
+
+test("lookup() with certificateNumber + a separate year field prefers the embedded prefix when both are present and agree", () => {
+    const results = lookup({ certificateNumber: "1893-A50000", year: 1893, recordType: "birth" });
+    assert.deepEqual(results.map(r => r.number), [37]);
+});
+
+
+test("lookup() with certificateNumber + a separate year field returns an empty array when they disagree", () => {
+    assert.deepEqual(
+        lookup({ certificateNumber: "1893-A50000", year: 1909, recordType: "birth" }),
+        []
+    );
 });

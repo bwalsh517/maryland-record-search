@@ -1,7 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const { lookup, lookupSeries } = require("../../src/index.js");
+const { lookup } = require("../../src/index.js");
 
 
 test("SE45-1 (first record) is Allegany, Jul 1969", () => {
@@ -27,7 +27,7 @@ test("SE45 does not handle Baltimore City", () => {
 
 
 test("SE45-1037 series lookup resolves to a valid archive.org URL", () => {
-    const results = lookupSeries("SE45-1037");
+    const results = lookup({ series: "SE45-1037" });
 
     assert.equal(results.length, 1);
     assert.ok(results[0].url.startsWith("https://archive.org/details/"));
@@ -41,12 +41,12 @@ test("SE45-1037 series lookup resolves to a valid archive.org URL", () => {
 // series (1038 through 7031) silently resolve to a URL for a file
 // that doesn't exist, instead of correctly returning no results.
 test("SE45-1038 (one past the real end of the series) returns no results", () => {
-    assert.deepEqual(lookupSeries("SE45-1038"), []);
+    assert.deepEqual(lookup({ series: "SE45-1038" }), []);
 });
 
 
 test("SE45-7031 (the old, incorrect end-of-range value) returns no results", () => {
-    assert.deepEqual(lookupSeries("SE45-7031"), []);
+    assert.deepEqual(lookup({ series: "SE45-7031" }), []);
 });
 
 

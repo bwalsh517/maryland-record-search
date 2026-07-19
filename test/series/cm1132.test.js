@@ -1,17 +1,17 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const { lookup, lookupYear, lookupSeries, lookupCertificate, listSeries } = require("../../src/index.js");
+const { lookup, listSeries } = require("../../src/index.js");
 
 
 test("CM1132-30 and CM1132-31 resolve to the correct archive.org URLs", () => {
     assert.equal(
-        lookupSeries("CM1132-30")[0].url,
+        lookup({ series: "CM1132-30" })[0].url,
         "https://archive.org/details/reclaim-the-records-baltimore-city-death-certificates-1875-1921-msa-cm-1132-00001-30/Reclaim_The_Records_-_Baltimore_City_Death_Certificates_1875-1921_-_msa_cm1132_-_00030/"
     );
 
     assert.equal(
-        lookupSeries("CM1132-31")[0].url,
+        lookup({ series: "CM1132-31" })[0].url,
         "https://archive.org/details/reclaim-the-records-baltimore-city-death-certificates-1875-1921-msa-cm-1132-0031"
     );
 });
@@ -49,12 +49,12 @@ test("a record's label leads with its actual date span, not just the certificate
 });
 
 
-test("lookupYear() shows a multi-month record exactly once, not once per month it covers", () => {
+test("lookup() shows a multi-month record exactly once, not once per month it covers", () => {
     // CM1132-118 (Jan-Apr) is found independently by each month's
     // query, since it doesn't span the whole year and the whole-year
     // month:null shortcut doesn't apply - dedup by (series, number)
     // is what keeps it to a single result.
-    const results = lookupYear({ location: "Baltimore City", year: 1914, recordType: "death" });
+    const results = lookup({ location: "Baltimore City", year: 1914, recordType: "death" });
     const numbers = results.map(r => r.number);
 
     assert.equal(numbers.length, new Set(numbers).size, "no duplicate record numbers");
@@ -84,8 +84,8 @@ test("date search shows a distinct label for a record with a date but no certifi
 });
 
 
-test("lookupCertificate() resolves the exact given page-jump example", () => {
-    const results = lookupCertificate("B100000", { recordType: "death" });
+test("lookup({ certificateNumber }) resolves the exact given page-jump example", () => {
+    const results = lookup({ certificateNumber: "B100000", recordType: "death" });
 
     assert.equal(results.length, 1);
     assert.equal(results[0].number, 94);
@@ -97,42 +97,42 @@ test("lookupCertificate() resolves the exact given page-jump example", () => {
 });
 
 
-test("lookupCertificate() results carry location: Baltimore City, same as location/date search results", () => {
-    const results = lookupCertificate("B100000", { recordType: "death" });
+test("lookup({ certificateNumber }) results carry location: Baltimore City, same as location/date search results", () => {
+    const results = lookup({ certificateNumber: "B100000", recordType: "death" });
 
     assert.equal(results[0].location, "Baltimore City");
 });
 
 
-test("lookupCertificate() accepts an optional YYYY- year prefix, matching CM1135's format", () => {
+test("lookup({ certificateNumber }) accepts an optional YYYY- year prefix, matching CM1135's format", () => {
     // Plain lookup, no year - unaffected.
-    const plain = lookupCertificate("A10295", { recordType: "death" });
+    const plain = lookup({ certificateNumber: "A10295", recordType: "death" });
     assert.equal(plain.length, 1);
     assert.equal(plain[0].number, 34);
 
     // A correct year prefix behaves identically to no prefix at all.
-    const correctYear = lookupCertificate("1888-A10295", { recordType: "death" });
+    const correctYear = lookup({ certificateNumber: "1888-A10295", recordType: "death" });
     assert.deepEqual(correctYear, plain);
 
     // A year that doesn't match the record's actual date returns
     // nothing, rather than either ignoring the year or throwing.
-    assert.deepEqual(lookupCertificate("1950-A10295", { recordType: "death" }), []);
+    assert.deepEqual(lookup({ certificateNumber: "1950-A10295", recordType: "death" }), []);
 
     // The old letter-dash style ("A-1234") still works, with or
     // without a year prefix in front of it.
     assert.deepEqual(
-        lookupCertificate("A-10295", { recordType: "death" }).map(r => r.number),
+        lookup({ certificateNumber: "A-10295", recordType: "death" }).map(r => r.number),
         [34]
     );
     assert.deepEqual(
-        lookupCertificate("1888-A-10295", { recordType: "death" }).map(r => r.number),
+        lookup({ certificateNumber: "1888-A-10295", recordType: "death" }).map(r => r.number),
         [34]
     );
 });
 
 
-test("lookupCertificate() handles the unlettered block", () => {
-    const results = lookupCertificate("500", { recordType: "death" });
+test("lookup({ certificateNumber }) handles the unlettered block", () => {
+    const results = lookup({ certificateNumber: "500", recordType: "death" });
 
     assert.equal(results.length, 1);
     assert.equal(results[0].number, 1);
@@ -140,32 +140,32 @@ test("lookupCertificate() handles the unlettered block", () => {
 });
 
 
-test("lookupCertificate() is case-insensitive on the letter prefix", () => {
-    const upper = lookupCertificate("B100000", { recordType: "death" });
-    const lower = lookupCertificate("b100000", { recordType: "death" });
+test("lookup({ certificateNumber }) is case-insensitive on the letter prefix", () => {
+    const upper = lookup({ certificateNumber: "B100000", recordType: "death" });
+    const lower = lookup({ certificateNumber: "b100000", recordType: "death" });
 
     assert.deepEqual(upper, lower);
 });
 
 
-test("lookupCertificate() correctly returns nothing for a number in a genuine inter-record gap", () => {
+test("lookup({ certificateNumber }) correctly returns nothing for a number in a genuine inter-record gap", () => {
     // Record 15 ends at 48500, record 16 starts at 48507 - a real gap
     // of 6 numbers, not an artifact of parsing.
-    assert.deepEqual(lookupCertificate("48503", { recordType: "death" }), []);
+    assert.deepEqual(lookup({ certificateNumber: "48503", recordType: "death" }), []);
 });
 
 
-test("lookupCertificate() rejects an invalid block letter and unparseable input", () => {
-    assert.deepEqual(lookupCertificate("H500", { recordType: "death" }), []);
-    assert.deepEqual(lookupCertificate("nonsense", { recordType: "death" }), []);
-    assert.deepEqual(lookupCertificate("", { recordType: "death" }), []);
+test("lookup({ certificateNumber }) rejects an invalid block letter and unparseable input", () => {
+    assert.deepEqual(lookup({ certificateNumber: "H500", recordType: "death" }), []);
+    assert.deepEqual(lookup({ certificateNumber: "nonsense", recordType: "death" }), []);
+    assert.deepEqual(lookup({ certificateNumber: "", recordType: "death" }), []);
 });
 
 
-test("lookupCertificate() correctly handles a range that crosses a letter block boundary (CM1132-31)", () => {
+test("lookup({ certificateNumber }) correctly handles a range that crosses a letter block boundary (CM1132-31)", () => {
     // Nos. 98451-A1974 - starts unlettered, ends in the A block.
-    const beforeCrossover = lookupCertificate("99000", { recordType: "death" });
-    const afterCrossover = lookupCertificate("A1000", { recordType: "death" });
+    const beforeCrossover = lookup({ certificateNumber: "99000", recordType: "death" });
+    const afterCrossover = lookup({ certificateNumber: "A1000", recordType: "death" });
 
     assert.equal(beforeCrossover[0].number, 31);
     assert.equal(afterCrossover[0].number, 31);
@@ -173,7 +173,7 @@ test("lookupCertificate() correctly handles a range that crosses a letter block 
 
 
 test("CM1132-244 is the confirmed unused/skipped record - informative result, no URL", () => {
-    const results = lookupSeries("CM1132-244");
+    const results = lookup({ series: "CM1132-244" });
 
     assert.equal(results.length, 1);
     assert.equal(results[0].url, null);
@@ -185,7 +185,7 @@ test("CM1132-244 does not appear in date search results (it has no date)", () =>
     // Its neighbors (243, 245) are both real dated records - confirm
     // 244 itself never shows up regardless of what month is queried.
     for (let month = 1; month <= 12; month++) {
-        const results = lookupYear({ location: "Baltimore City", year: 1948, recordType: "death" });
+        const results = lookup({ location: "Baltimore City", year: 1948, recordType: "death" });
         assert.ok(results.every(r => r.number !== 244));
     }
 });
@@ -212,8 +212,8 @@ test("CM1132's dateRange reflects the real first and last record", () => {
     assert.deepEqual(series.dateRange, { startYear: 1874, startMonth: 12, endYear: 1950, endMonth: 1 });
 });
 
-test("lookupCertificate() returns no page link for CM1132-31 ( large file view issue, no page viewer)", () => {
-    const results = lookupCertificate("99000", { recordType: "death" });
+test("lookup({ certificateNumber }) returns no page link for CM1132-31 ( large file view issue, no page viewer)", () => {
+    const results = lookup({ certificateNumber: "99000", recordType: "death" });
 
     assert.equal(results[0].number, 31);
     assert.equal(results[0].approximatePageUrl, null);
