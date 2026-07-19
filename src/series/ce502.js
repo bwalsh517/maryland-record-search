@@ -28,10 +28,10 @@ if (typeof require !== "undefined") {
      * duplicate (currently just 1952's two certificates numbered
      * 3000 - see ce502-data.js's certStartLetter). Letter is returned
      * uppercased, or null if none was given; the caller (below)
-     * decides what a letter actually disambiguates. The "YYYY-" prefix
-     * itself is required and already split off by the time this runs -
-     * see BaseSeries.splitCertificateQuery(), called from
-     * lookupCertificateNumber() below.
+     * decides what a letter actually disambiguates. rest never carries
+     * a "YYYY-" prefix - that's already been parsed and stripped by
+     * lookup.js's lookupCertificate() before this series is even
+     * chosen (see BaseSeries.splitCertificateQuery()).
      */
     function parseCertificateNumber(rest) {
 
@@ -126,10 +126,13 @@ if (typeof require !== "undefined") {
          * Page-jump math matches SE46's pre-2002 (backs-scanned) era:
          * certificates are on every other page, the first certificate
          * in a record's range sits at page 0.
+         *
+         * year is required here (this series' numbers reset every
+         * year, so a bare number alone is meaningless) - lookup.js
+         * already resolved it (from an embedded "YYYY-" prefix or a
+         * separate year field) before calling this.
          */
-        lookupCertificateNumber(input) {
-
-            const { year, rest } = this.splitCertificateQuery(input);
+        lookupCertificateNumber(rest, year = null) {
 
             if (year === null) {
                 return [];

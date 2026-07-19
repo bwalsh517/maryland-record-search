@@ -26,9 +26,9 @@ if (typeof require !== "undefined") {
     /**
      * "LETTER?NUMBER[SUFFIX]" - e.g. "A50000", "G33501D", "L609". The
      * optional "YYYY-" prefix and legacy "A-50000" dash style are
-     * already stripped by the time this runs - see
-     * BaseSeries.splitCertificateQuery(), called from
-     * lookupCertificateNumber() below. "L" numbers are a completely
+     * already stripped by the time this runs - lookup.js's
+     * lookupCertificate() does that via BaseSeries.splitCertificateQuery()
+     * before this series is even chosen. "L" numbers are a completely
      * separate namespace (the lost-number sets, see
      * lookupCertificateNumber() below), not part of the main A-G
      * letter cycle.
@@ -185,20 +185,22 @@ if (typeof require !== "undefined") {
          * "A" and "B" each cycle through the full 1-100000 range twice
          * before C-G (so far), so a bare letter+number is genuinely
          * ambiguous and this returns every record whose segment contains
-         * it (see cm1135-data.js's header comment). An optional "YYYY-"
-         * prefix narrows to record(s) whose date actually covers that
-         * year. A trailing suffix (e.g. the "D" in "G33501D") only
-         * matters at the exact boundary number it was transcribed on -
-         * querying with it narrows to that boundary; querying without it
-         * matches regardless, same as CE502's confirmed "3000"/"3000A"
-         * duplicate-certificate handling.
+         * it (see cm1135-data.js's header comment). year, resolved from
+         * an optional "YYYY-" prefix by lookup.js's lookupCertificate()
+         * before this series is even chosen (see
+         * BaseSeries.splitCertificateQuery()), narrows to record(s)
+         * whose date actually covers that year. A trailing suffix (e.g.
+         * the "D" in "G33501D") only matters at the exact boundary
+         * number it was transcribed on - querying with it narrows to
+         * that boundary; querying without it matches regardless, same
+         * as CE502's confirmed "3000"/"3000A" duplicate-certificate
+         * handling.
          *
          * "L" numbers are a separate, non-overlapping namespace (the
          * lost-number sets) and always resolve to exactly one record.
          */
-        lookupCertificateNumber(input) {
+        lookupCertificateNumber(rest, year = null) {
 
-            const { year, rest } = this.splitCertificateQuery(input);
             const parsed = parseLetterNumberSuffix(rest);
 
             if (!parsed) {
