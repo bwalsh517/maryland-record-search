@@ -5,6 +5,8 @@
  * that namespace object exists before anything else touches it.
  *
  * Load this first (src/index.js already does, for you).
+ *
+ * @namespace MDRecordSearch
  */
 (function (global) {
     "use strict";

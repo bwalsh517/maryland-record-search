@@ -9,6 +9,40 @@ if (typeof require !== "undefined") {
     const ns = global.MDRecordSearch;
 
     /**
+     * @typedef {object} LookupOptions
+     * @property {string} [series] - Direct series/file ID, e.g. "SE45-1037".
+     * @property {string} [certificateNumber] - Raw certificate number, e.g. "B45678".
+     * @property {string} [location] - County name (or "Baltimore City"), or a recognized alias/code.
+     * @property {number} [month] - 1-12. Omit to search the whole year.
+     * @property {number} [year]
+     * @property {string} [recordType] - "death" or "birth". Omit to search every registered type.
+     */
+
+    /**
+     * @typedef {object} LookupYearOptions
+     * @property {string} location - County name (or "Baltimore City"), or a recognized alias/code.
+     * @property {number} year
+     * @property {string} [recordType] - "death" or "birth". Omit to search every registered type.
+     */
+
+    /**
+     * @typedef {object} LookupCertificateOptions
+     * @property {string} [recordType] - "death" or "birth". Omit to search every registered type.
+     */
+
+    /**
+     * @typedef {object} SeriesInfo
+     * @property {string} name - Series name, e.g. "SE43".
+     * @property {string} recordType - "death" or "birth".
+     * @property {string} seriesHome - URL of the series' MSA guide page.
+     * @property {?object} dateRange - {startYear, startMonth, endYear, endMonth}, or null if unrestricted.
+     * @property {?object} seriesIdRange - {start, end} in the series' own numbering, or null.
+     * @property {boolean} supportsLocationSearch
+     * @property {boolean} supportsCertificateNumberSearch
+     * @property {?object} certificateSearchRange - Defaults to dateRange when certificate search is supported; null otherwise.
+     */
+
+    /**
      * Main entry point for third-party integrations.
      *
      * Four ways to call it:
@@ -43,6 +77,11 @@ if (typeof require !== "undefined") {
      * validate a location string yourself and see *why* it failed,
      * call MDRecordSearch.counties.normalizeCounty() directly - it
      * throws a CountyNotFoundError with detail.
+     *
+     * @param {LookupOptions} [options]
+     * @returns {Array.<LookupResult>} Matching results, possibly empty.
+     * @function
+     * @memberof MDRecordSearch
      */
     function lookup(options = {}) {
 
@@ -147,6 +186,11 @@ if (typeof require !== "undefined") {
      * span - currently just CM1135-113) - without it in the key, the
      * file's second span would get deduped away as if it were the
      * same hit as the first.
+     *
+     * @param {LookupYearOptions} options
+     * @returns {Array.<LookupResult>} Matching results for the whole year, possibly empty. Never throws.
+     * @function
+     * @memberof MDRecordSearch
      */
     function lookupYear(options) {
 
@@ -209,6 +253,12 @@ if (typeof require !== "undefined") {
      * death certificates, e.g. "B45678"). Most series don't support
      * this at all - see listSeries()'s supportsCertificateNumberSearch
      * field to check ahead of time.
+     *
+     * @param {string} certificateNumber - Raw certificate/record number, e.g. "B45678" or "1995-1234".
+     * @param {LookupCertificateOptions} [options]
+     * @returns {Array.<LookupResult>} Matching results, possibly empty. Never throws.
+     * @function
+     * @memberof MDRecordSearch
      */
     function lookupCertificate(certificateNumber, options = {}) {
 
@@ -236,6 +286,11 @@ if (typeof require !== "undefined") {
      * Matches the series name exactly (everything before the last
      * "-"), not by prefix - so a malformed ID can't be misattributed
      * to an unrelated series just because their names share a prefix.
+     *
+     * @param {string} seriesId - Full series/file ID, e.g. "SE45-1037".
+     * @returns {Array.<LookupResult>} A single-element array if the ID resolves, otherwise empty. Never throws.
+     * @function
+     * @memberof MDRecordSearch
      */
     function lookupSeries(seriesId) {
 
@@ -275,6 +330,10 @@ if (typeof require !== "undefined") {
      * data each series' canHandle() uses (via inDateRange()) - not a
      * separately-maintained copy, so it can't disagree with actual
      * search behavior.
+     *
+     * @returns {Array.<SeriesInfo>} One entry per registered series.
+     * @function
+     * @memberof MDRecordSearch
      */
     function listSeries() {
         return ns.SERIES.map(series => {

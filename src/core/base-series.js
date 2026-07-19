@@ -6,6 +6,29 @@ if (typeof require !== "undefined") {
     "use strict";
 
     /**
+     * The object every lookup function in this library returns, one
+     * per matching file/certificate. See BaseSeries#createResult,
+     * which is what actually builds one - every field listed here is
+     * always present, even when null.
+     *
+     * @typedef {object} LookupResult
+     * @property {string} series - Series name, e.g. "SE45".
+     * @property {string} seriesType - "death" or "birth".
+     * @property {string} seriesHome - URL of the series' MSA guide page.
+     * @property {?string} location
+     * @property {?number} year
+     * @property {?number} month - 1-12, or null for a whole-year/no-month-dimension record.
+     * @property {?number} number - File number within this series.
+     * @property {string} label - Extra detail beyond location/number, empty when there's nothing extra.
+     * @property {?string} url - A scan or MSA guide URL, or null if none is known.
+     * @property {?string} msaGuideUrl - MSA's own details page for this number, independent of `url`.
+     * @property {?number} part - Distinguishes a multipart record's spans from each other; null otherwise.
+     * @property {number} sortWeight - 0 for an ordinary result; higher sorts after ordinary results.
+     * @property {?string} certificateNumber - Set only for certificate-number lookups.
+     * @property {?string} approximatePageUrl - An approximate deep link, set only where computed.
+     */
+
+    /**
      * Base class every record series extends. A "series" is one
      * physical set of scanned files on archive.org (e.g. Maryland
      * State Archives series SE43) covering a range of dates/locations
@@ -28,6 +51,13 @@ if (typeof require !== "undefined") {
      */
     class BaseSeries {
 
+        /**
+         * @param {string} name - Series identifier, e.g. "SE45". Used as the prefix
+         * for every file ID in this series ("SE45-1037") and as the registry key.
+         * @param {string} seriesType - Record type, e.g. "death" or "birth".
+         * @param {string} [seriesHome] - URL of the series' own MSA guide page.
+         * Defaults to the standard MSA series-view URL built from `name`.
+         */
         constructor(
             name,
             seriesType,
@@ -61,6 +91,10 @@ if (typeof require !== "undefined") {
          * included either way, and this is also what tells the display
          * formatting (see examples/basic-form/app.js) to show just the
          * year instead of a specific month.
+         *
+         * @param {number} month - 1-12.
+         * @param {number} year
+         * @returns {boolean}
          */
         inDateRange(month, year) {
 
@@ -98,6 +132,10 @@ if (typeof require !== "undefined") {
          * into. Shared by archiveUrl() below and by any subclass that
          * needs the raw range (e.g. to special-case one entry) without
          * re-implementing the linear scan.
+         *
+         * @param {number} number - File number within this series.
+         * @returns {?object} The matching ARCHIVE_RANGES entry, or null if none matches
+         * or this series has no ARCHIVE_RANGES table at all.
          */
         findArchiveRange(number) {
 
@@ -116,6 +154,10 @@ if (typeof require !== "undefined") {
          * Override this (not archiveUrl) if a series needs to special-case
          * how a URL is built for certain numbers - see CM1132Series for
          * an example of overriding just this piece.
+         *
+         * @param {object} range - An ARCHIVE_RANGES entry, as returned by findArchiveRange().
+         * @param {number} number - File number within this series.
+         * @returns {string} The archive.org details URL for this file.
          */
         buildArchiveUrl(range, number) {
             return (
@@ -136,6 +178,9 @@ if (typeof require !== "undefined") {
          * below and by any series that needs to build one directly
          * (SE43's confirmed-missing-scan gap, SE46's 2013-2014 tail,
          * etc.) instead of duplicating the template.
+         *
+         * @param {number} number - File number within this series.
+         * @returns {string} The MSA guide details-page URL for this file.
          */
         msaItemUrl(number) {
             return `https://guide.msa.maryland.gov/pages/item.aspx?ID=${this.name}-${number}`;
@@ -151,6 +196,9 @@ if (typeof require !== "undefined") {
          * needs to write code here when it has something better than
          * the MSA page to offer for part of its range; everything else
          * is free.
+         *
+         * @param {number} number - File number within this series.
+         * @returns {?string} A scan or MSA guide URL, or null if this number has no known page at all.
          */
         archiveUrl(number) {
 
@@ -173,6 +221,9 @@ if (typeof require !== "undefined") {
          * Single entry point used internally by MDRecordSearch.lookup().
          * Most callers should use MDRecordSearch.lookup()/lookupSeries()
          * instead of calling a series instance directly.
+         *
+         * @param {LookupOptions} options
+         * @returns {Array.<LookupResult>} Matching results for this series, possibly empty.
          */
         lookup(options) {
 
@@ -206,6 +257,13 @@ if (typeof require !== "undefined") {
          * arbitrary month to it). Check listSeries()'s
          * supportsLocationSearch field to know ahead of time whether a
          * series covers this kind of search at all.
+         *
+         * Subclasses that support location/date search override this.
+         *
+         * @param {string} _location - Normalized county name (or "Baltimore City").
+         * @param {number} _month - 1-12.
+         * @param {number} _year
+         * @returns {Array.<LookupResult>} Matching results, possibly empty.
          */
         lookupLocationMonthYear(_location, _month, _year) {
             return [];
@@ -224,6 +282,9 @@ if (typeof require !== "undefined") {
          * optional, whether it's a plain number or has its own letter
          * scheme, is all series-specific and stays in each series'
          * own lookupCertificateNumber().
+         *
+         * @param {string} input - Raw certificate query, e.g. "1995-1234" or "A-1234".
+         * @returns {{year: ?number, rest: string}}
          */
         splitCertificateQuery(input) {
 
@@ -252,12 +313,23 @@ if (typeof require !== "undefined") {
          * results here. Check listSeries()'s
          * supportsCertificateNumberSearch field to know ahead of time
          * whether a series supports this.
+         *
+         * Subclasses that support certificate-number search override this.
+         *
+         * @param {string} _certificateNumber - Raw certificate/record number.
+         * @returns {Array.<LookupResult>} Matching results, possibly empty.
          */
         lookupCertificateNumber(_certificateNumber) {
             return [];
         }
 
 
+        /**
+         * Direct lookup by this series' own file ID, e.g. "SE45-1037".
+         *
+         * @param {string} seriesId - Full series/file ID, matched against `this.name`.
+         * @returns {Array.<LookupResult>} A single-element array if the ID resolves, otherwise empty.
+         */
         lookupSeries(seriesId) {
 
             const match = seriesId
@@ -296,6 +368,15 @@ if (typeof require !== "undefined") {
         }
 
 
+        /**
+         * Builds one result object. Every field in the shape below is
+         * always present, even when null, so callers never need to
+         * guess whether a key is missing versus not applicable. See
+         * the LookupResult typedef above for the full field list.
+         *
+         * @param {object} [fields] - Overrides for any of the default fields below.
+         * @returns {LookupResult}
+         */
         createResult(fields = {}) {
 
             const number = fields.number ?? null;
