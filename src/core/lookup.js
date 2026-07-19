@@ -87,10 +87,7 @@ if (typeof require !== "undefined") {
             }
 
             if (options.certificateNumber) {
-                return lookupCertificate(options.certificateNumber, {
-                    recordType: options.recordType,
-                    year: options.year
-                });
+                return lookupCertificate(options);
             }
 
             if (options.location && options.year && !options.month) {
@@ -264,11 +261,12 @@ if (typeof require !== "undefined") {
      * returns [] rather than guessing.
      *
      * Not part of the public API - lookup({ certificateNumber, ... })
-     * calls this internally.
+     * calls this internally, passing its own options object straight
+     * through - same pattern as lookupMonth()/lookupYear() above.
      */
-    function lookupCertificate(certificateNumber, options = {}) {
+    function lookupCertificate(options) {
 
-        const { recordType, year } = options;
+        const { certificateNumber, recordType, year } = options;
 
         try {
 
