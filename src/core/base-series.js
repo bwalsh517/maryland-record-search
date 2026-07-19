@@ -72,6 +72,16 @@ if (typeof require !== "undefined") {
             // which inDateRange() treats as unrestricted.
             this.dateRange = null;
 
+            // Archive.org page number where a scanned item's actual
+            // certificates begin, for pageForPosition() below. Default
+            // 0 means "no leading pages before the first certificate" -
+            // a subclass whose scans have leading info pages (a title
+            // page, an index, etc.) before the certificates start sets
+            // this in its own constructor. Whether archive.org's own
+            // page numbering starts at 0 or 1 doesn't matter here -
+            // this is just the real page number certificates start on.
+            this.pageNumberStart = 0;
+
             this._index = null;
         }
 
@@ -348,6 +358,33 @@ if (typeof require !== "undefined") {
                 certificateNumber: rest,
                 year: parsedYear !== null ? parsedYear : (year != null ? Number(year) : null)
             };
+        }
+
+
+        /**
+         * Turns a certificate's 0-indexed position within a scanned
+         * item's certificates (0 for the first certificate) into the
+         * real archive.org page number, by adding pageNumberStart -
+         * this series' own default, or an explicit override for one
+         * specific record, when that record's item has a different
+         * number of leading pages than the rest of the series.
+         *
+         * How many page-units each certificate itself takes up (one
+         * page, two, a scanned back-of-certificate page in between,
+         * etc.) is not this method's concern - a series with that kind
+         * of gap (see SE46 and CE502) already folds it into `position`
+         * before calling this; this only ever adds a starting offset.
+         *
+         * @param {number} position - 0-indexed certificate position within the item.
+         * @param {?number} [pageNumberStart] - Overrides this.pageNumberStart for one call, e.g. a per-record exception.
+         * @returns {number}
+         */
+        pageForPosition(position, pageNumberStart) {
+            const start = pageNumberStart !== undefined && pageNumberStart !== null
+                ? pageNumberStart
+                : this.pageNumberStart;
+
+            return start + position;
         }
 
 

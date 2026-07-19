@@ -259,7 +259,7 @@ test("certificate lookup: a scanned record (CM1135-1 through 150) gets an approx
     assert.ok(r31);
     assert.equal(
         r31.approximatePageUrl,
-        "https://archive.org/details/reclaim-the-records-baltimore-maryland-birth-certificates-1875-1922-cm-1135-001/Reclaim_The_Records_-_Baltimore_Maryland_Birth_Certificates_-_1875-1922_-_CM1135-031/page/n4690/mode/1up"
+        "https://archive.org/details/reclaim-the-records-baltimore-maryland-birth-certificates-1875-1922-cm-1135-001/Reclaim_The_Records_-_Baltimore_Maryland_Birth_Certificates_-_1875-1922_-_CM1135-031/page/n4694/mode/1up"
     );
 });
 

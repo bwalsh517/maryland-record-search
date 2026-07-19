@@ -126,6 +126,12 @@ if (typeof require !== "undefined") {
             // 1973-1987 isn't covered by certificate lookup yet).
             this.certificateSearchRange = { startYear: 1988, startMonth: 0, endYear: 2014, endMonth: 0 };
 
+            // No leading pages before the first certificate in this
+            // series' scans (unlike CM1132/CM1135) - stated explicitly
+            // even though it matches BaseSeries's own default, so every
+            // series' page-jump assumptions are visible in one place.
+            this.pageNumberStart = 0;
+
             this._decemberWorcesterNumbers = null;
 
             this.ARCHIVE_RANGES = [
@@ -414,11 +420,14 @@ if (typeof require !== "undefined") {
             }
 
             // Certificate backs were scanned through 2001 (2 pages per
-            // certificate), but not from 2002 on (1 page each). Pages
-            // start at 0, at the first certificate in the record.
+            // certificate), but not from 2002 on (1 page each) - folded
+            // into position here since it's how many page-units each
+            // certificate itself takes up, not a starting offset (see
+            // pageForPosition() on BaseSeries, which only adds
+            // this.pageNumberStart, 0 for this series).
             const backsScanned = year <= 2001;
-            const position = cert - record.certStart;
-            const page = position * (backsScanned ? 2 : 1);
+            const rawPosition = cert - record.certStart;
+            const page = this.pageForPosition(rawPosition * (backsScanned ? 2 : 1));
 
             return [
                 this.createResult({

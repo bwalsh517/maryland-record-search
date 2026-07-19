@@ -92,7 +92,7 @@ test("lookup({ certificateNumber }) resolves the exact given page-jump example",
     assert.equal(results[0].label, "Nos. B99667-C2499");
     assert.equal(
         results[0].approximatePageUrl,
-        "https://archive.org/details/reclaim-the-records-baltimore-city-death-certificates-1875-1921-msa-cm-1132-00091-100/Reclaim_The_Records_-_Baltimore_City_Death_Certificates_1875-1921_-_msa_cm1132_-_00094/page/n333/mode/1up"
+        "https://archive.org/details/reclaim-the-records-baltimore-city-death-certificates-1875-1921-msa-cm-1132-00091-100/Reclaim_The_Records_-_Baltimore_City_Death_Certificates_1875-1921_-_msa_cm1132_-_00094/page/n339/mode/1up"
     );
 });
 
