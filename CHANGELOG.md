@@ -1,5 +1,31 @@
 # Changelog
 
+## 1.3.0
+
+### Added
+
+- `BaseSeries.pageNumberStart` and `BaseSeries#pageForPosition()` give
+  every series a configurable number of leading non-certificate pages
+  (title page, index, etc.) to skip before its page-jump math starts
+  counting. CM1132 and CM1135 set this to 6 and 4 respectively
+  (confirmed against the scans) - certificate results in both series
+  previously pointed 6/4 pages too early for most of the series. SE46
+  and CE502 declare 0 explicitly, matching their existing behavior
+  with no change to their output. A per-record override is available
+  via an optional `pageNumberStart` field on a `DATE_CERT_RECORDS`
+  entry, though none is populated yet.
+
+### Fixed
+
+- CM1132 records 1-30 now resolve to the correct archive.org file.
+  Those 30 scans are filed one position off from their real MSA
+  numbers (MSA-30 under archive.org's 00001, every other number in
+  the block one higher than its real number), confirmed by matching
+  certificate numbers on the scans against the MSA series
+  descriptions. Affected records also carry a label note (e.g.
+  "mislabeled as CM1132-1 at archive.org") so the mismatch is visible
+  instead of silent.
+
 ## 1.2.0
 
 ### Added
