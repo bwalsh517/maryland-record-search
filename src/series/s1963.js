@@ -48,15 +48,17 @@ if (typeof require !== "undefined") {
                 2961: { year: 1909, month: 3, county: "Saint Mary's", note: "No cards are extant for this month and county" }
             };
 
-            // Confirmed anomaly: this record's archive.org collection
-            // slug doesn't match its own number the way the standard
-            // formula in archiveUrl() below expects - the folder name
-            // inside still uses the record's own padded number either
-            // way. Only one is known so far; add more here if others
-            // turn up.
-            this.COLLECTION_OVERRIDES = {
-                2001: "reclaim-the-records-maryland-birth-certificates-1898-1910-s-1963-2346"
-            };
+            // Archive.org files these in shared blocks (like CM1132 and
+            // S1988), not one item per record - confirmed against the
+            // actual collections. Block 2001-3000 is filed under
+            // "2346" instead of "2001"; every other block's collection
+            // name matches its own start number.
+            this.ARCHIVE_RANGES = [
+                { start: 23, end: 1000, collection: "reclaim-the-records-maryland-birth-certificates-1898-1910-s-1963-0023" },
+                { start: 1001, end: 2000, collection: "reclaim-the-records-maryland-birth-certificates-1898-1910-s-1963-1001" },
+                { start: 2001, end: 3000, collection: "reclaim-the-records-maryland-birth-certificates-1898-1910-s-1963-2346" },
+                { start: 3001, end: 3265, collection: "reclaim-the-records-maryland-birth-certificates-1898-1910-s-1963-3001" }
+            ];
         }
 
 
@@ -167,10 +169,9 @@ if (typeof require !== "undefined") {
         }
 
 
-        // Full override, not buildArchiveUrl/ARCHIVE_RANGES - no-file
-        // numbers have no URL at all, and the regular range doesn't fit
-        // the shared-collection range-table shape (each record appears
-        // to get its own archive.org item, like S1988).
+        // Full override, not buildArchiveUrl/BaseSeries.archiveUrl() -
+        // no-file numbers have no URL at all, and archive.org's block
+        // boundaries here don't line up with any padding-based formula.
         archiveUrl(number) {
 
             const { start, end } = this.LEADING_SPECIAL_RANGE;
@@ -186,16 +187,17 @@ if (typeof require !== "undefined") {
                 return null;
             }
 
-            // Collection slug is normally the record's own padded
-            // number, same shape as S1988, but a few records are
-            // exceptions - see COLLECTION_OVERRIDES above.
+            const range = this.ARCHIVE_RANGES.find((r) => number >= r.start && number <= r.end);
+
+            if (!range) {
+                return super.archiveUrl(number);
+            }
+
             const padded = String(number).padStart(4, "0");
-            const collection = this.COLLECTION_OVERRIDES[number] ||
-                `reclaim-the-records-maryland-birth-certificates-1898-1910-s-1963-${padded}`;
 
             return (
                 "https://archive.org/details/" +
-                collection +
+                range.collection +
                 "/" +
                 `Reclaim_The_Records_-_Maryland_Birth_Certificates_-_1898-1910_-_S1963-${padded}` +
                 "/"
