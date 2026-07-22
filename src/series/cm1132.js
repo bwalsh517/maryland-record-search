@@ -18,9 +18,9 @@ if (typeof require !== "undefined") {
     /**
      * "LETTER?NUMBER" - e.g. "B45678", no letter for the earliest
      * block. The optional "YYYY-" prefix and legacy "A-1234" dash
-     * style are already stripped by the time this runs - see
-     * BaseSeries.splitCertificateQuery(), called from
-     * lookupCertificateNumber() below.
+     * style are already stripped by the time this runs - lookup.js's
+     * lookupCertificate() does that via BaseSeries.splitCertificateQuery()
+     * before this series is even chosen.
      */
     function parseLetterNumber(rest) {
 
@@ -50,6 +50,45 @@ if (typeof require !== "undefined") {
     }
 
 
+    // Records 1-30's scanned items are filed on archive.org one position
+    // off from their real MSA numbers - MSA-30 is filed under
+    // archive.org's 00001, and every other number in the block is
+    // filed one higher than its real number (MSA-1 under 00002, MSA-2
+    // under 00003, ... MSA-29 under 00030). Confirmed by opening the
+    // actual scans and matching their certificate numbers against
+    // DATE_CERT_RECORDS below. This is an archive.org filing quirk, not
+    // a records anomaly - only the URL and its label note are affected,
+    // nothing about the record's real date/certificate data.
+    function archiveOrgNumber(number) {
+
+        if (number < 1 || number > 30) {
+            return number;
+        }
+
+        return number === 30 ? 1 : number + 1;
+    }
+
+    function archiveNumberNote(number, seriesName) {
+
+        const archiveNumber = archiveOrgNumber(number);
+
+        return archiveNumber === number
+            ? null
+            : `mislabeled as ${seriesName}-${archiveNumber} at archive.org`;
+    }
+
+    function withArchiveNote(label, number, seriesName) {
+
+        const note = archiveNumberNote(number, seriesName);
+
+        if (!note) {
+            return label;
+        }
+
+        return label ? `${label} (${note})` : `(${note})`;
+    }
+
+
     function formatRecordDateRange(date) {
 
         const start = `${String(date.startMonth).padStart(2, "0")}/${date.startYear}`;
@@ -76,6 +115,13 @@ if (typeof require !== "undefined") {
             this.dateRange = { startYear: 1874, startMonth: 12, endYear: 1950, endMonth: 1 };
 
             this.seriesIdRange = { start: 1, end: 248 };
+
+            // Every scanned item in this series has 6 non-certificate
+            // pages (title page, index, etc.) before the certificates
+            // actually start - confirmed directly against the scans.
+            // See DATE_CERT_RECORDS entries' own pageNumberStart for a
+            // record whose item is confirmed to differ.
+            this.pageNumberStart = 6;
 
             this.ARCHIVE_RANGES = [
                 { start: 1, end: 30, collection: "reclaim-the-records-baltimore-city-death-certificates-1875-1921-msa-cm-1132-00001-30", prefix: "Reclaim_The_Records_-_Baltimore_City_Death_Certificates_1875-1921_-_msa_cm1132_-_", padding: 5 },
@@ -388,15 +434,17 @@ if (typeof require !== "undefined") {
 
 
         // File 31 lives directly at the item root, not under a
-        // per-file prefix like every other number in this series -
-        // that's the only reason this override exists.
+        // per-file prefix like every other number in this series.
+        // Records 1-30 also need their real MSA number translated to
+        // the number archive.org actually filed them under (one
+        // higher, wrapping 30 back to 1) - see archiveOrgNumber() above.
         buildArchiveUrl(range, number) {
 
             if (number === 31) {
                 return "https://archive.org/details/" + range.collection;
             }
 
-            return super.buildArchiveUrl(range, number);
+            return super.buildArchiveUrl(range, archiveOrgNumber(number));
         }
 
 
@@ -419,7 +467,10 @@ if (typeof require !== "undefined") {
                 ];
             }
 
-            return super.lookupSeries(seriesId);
+            return super.lookupSeries(seriesId).map(result => ({
+                ...result,
+                label: withArchiveNote(result.label, number, this.name)
+            }));
         }
 
 
@@ -459,7 +510,7 @@ if (typeof require !== "undefined") {
                     year,
                     month,
                     number: record.number,
-                    label: `${formatRecordDateRange(record.date)} ${certLabel}`,
+                    label: withArchiveNote(`${formatRecordDateRange(record.date)} ${certLabel}`, record.number, this.name),
                     url: this.archiveUrl(record.number)
                 });
             });
@@ -471,27 +522,28 @@ if (typeof require !== "undefined") {
          * sequence across the whole series (not per-county or per-year
          * like the other series' record numbers), so a specific
          * certificate number can be looked up directly to find which
-         * scanned item it's in - see parseLetterNumber() above and
-         * BaseSeries.splitCertificateQuery() for the input format
+         * scanned item it's in - see parseLetterNumber() above
          * ("B45678", case-insensitive, no letter for the earliest
-         * block; an optional "YYYY-" prefix is accepted for
-         * consistency with CM1135's certificate search, and validated
-         * against the record's actual date if given, even though no
-         * letter here is ever reused the way CM1135's are).
+         * block). An optional "YYYY-" prefix is accepted for
+         * consistency with CM1135's certificate search - already
+         * parsed and stripped by lookup.js's lookupCertificate() by
+         * the time this runs (see BaseSeries.splitCertificateQuery()),
+         * so year arrives here as a resolved value (or null), and is
+         * validated against the record's actual date if given, even
+         * though no letter here is ever reused the way CM1135's are.
          *
          * Also computes an approximate deep link to the right page
          * within that item, assuming roughly one certificate per
-         * scanned page (based on one known anchor point: the 334th
-         * certificate in a given record's range corresponds to that
-         * item's page 333). This is a rough estimate, not a precise
-         * lookup - if it overshoots the item's actual page count,
-         * archive.org's viewer just lands on page 1 instead of
-         * breaking, so an imprecise estimate is harmless, just less
-         * useful for certificates near the end of a large range.
+         * scanned page after the item's leading pages (see
+         * pageForPosition() on BaseSeries and this.pageNumberStart
+         * above). This is a rough estimate, not a precise lookup - if
+         * it overshoots the item's actual page count, archive.org's
+         * viewer just lands on page 1 instead of breaking, so an
+         * imprecise estimate is harmless, just less useful for
+         * certificates near the end of a large range.
          */
-        lookupCertificateNumber(certificateNumber) {
+        lookupCertificateNumber(rest, year = null) {
 
-            const { year, rest } = this.splitCertificateQuery(certificateNumber);
             const linear = parseLetterNumber(rest);
 
             if (linear === null) {
@@ -516,8 +568,8 @@ if (typeof require !== "undefined") {
                 return [];
             }
 
-            const position = linear - record.cert.startLinear + 1;
-            const page = Math.max(1, position - 1);
+            const position = linear - record.cert.startLinear;
+            const page = this.pageForPosition(position, record.pageNumberStart);
 
             // Record 31's collection isn't one continuous scan like every other
             // record - it's split into several smaller files, each covering only
@@ -532,7 +584,7 @@ if (typeof require !== "undefined") {
                     number: record.number,
                     year: record.date ? record.date.startYear : null,
                     month: record.date ? record.date.startMonth : null,
-                    label: record.cert.label,
+                    label: withArchiveNote(record.cert.label, record.number, this.name),
                     certificateNumber: formatCertificateNumber(linear),
                     url,
                     approximatePageUrl:

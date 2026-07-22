@@ -87,11 +87,13 @@ if (typeof require !== "undefined") {
     }
 
     /**
-     * SE46's own numbers reset every year, so once BaseSeries.
-     * splitCertificateQuery() has split off the "YYYY-" prefix (see
-     * lookupCertificateNumber() below, which requires it - a bare
-     * number would be ambiguous), all that's left to check here is
-     * that what remains is a plain positive integer.
+     * SE46's own numbers reset every year, so once lookup.js's
+     * lookupCertificate() has split off the "YYYY-" prefix via
+     * BaseSeries.splitCertificateQuery() before this series is even
+     * chosen (a bare number would be ambiguous - see
+     * lookupCertificateNumber() below, which requires a resolved
+     * year), all that's left to check here is that what remains is a
+     * plain positive integer.
      */
     function parseCertificateNumber(rest) {
 
@@ -123,6 +125,12 @@ if (typeof require !== "undefined") {
             // location dimension exists after 1987 at all, and
             // 1973-1987 isn't covered by certificate lookup yet).
             this.certificateSearchRange = { startYear: 1988, startMonth: 0, endYear: 2014, endMonth: 0 };
+
+            // No leading pages before the first certificate in this
+            // series' scans (unlike CM1132/CM1135) - stated explicitly
+            // even though it matches BaseSeries's own default, so every
+            // series' page-jump assumptions are visible in one place.
+            this.pageNumberStart = 0;
 
             this._decemberWorcesterNumbers = null;
 
@@ -331,10 +339,12 @@ if (typeof require !== "undefined") {
          * but point at the MSA guide entry rather than a scanned page,
          * and carry no approximatePageUrl, since there's no scan to
          * page-jump into.
+         *
+         * year is required here - lookup.js already resolved it (from
+         * an embedded "YYYY-" prefix or a separate year field) before
+         * calling this.
          */
-        lookupCertificateNumber(input) {
-
-            const { year, rest } = this.splitCertificateQuery(input);
+        lookupCertificateNumber(rest, year = null) {
 
             if (year === null) {
                 return [];
@@ -410,11 +420,14 @@ if (typeof require !== "undefined") {
             }
 
             // Certificate backs were scanned through 2001 (2 pages per
-            // certificate), but not from 2002 on (1 page each). Pages
-            // start at 0, at the first certificate in the record.
+            // certificate), but not from 2002 on (1 page each) - folded
+            // into position here since it's how many page-units each
+            // certificate itself takes up, not a starting offset (see
+            // pageForPosition() on BaseSeries, which only adds
+            // this.pageNumberStart, 0 for this series).
             const backsScanned = year <= 2001;
-            const position = cert - record.certStart;
-            const page = position * (backsScanned ? 2 : 1);
+            const rawPosition = cert - record.certStart;
+            const page = this.pageForPosition(rawPosition * (backsScanned ? 2 : 1));
 
             return [
                 this.createResult({

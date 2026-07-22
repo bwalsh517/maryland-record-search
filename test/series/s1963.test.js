@@ -1,7 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const { lookup, lookupSeries, listSeries } = require("../../src/index.js");
+const { lookup, listSeries } = require("../../src/index.js");
 
 
 test("S1963-23 is Allegany, Aug 1898 (first record of the regular rotation)", () => {
@@ -13,12 +13,12 @@ test("S1963-23 is Allegany, Aug 1898 (first record of the regular rotation)", ()
 
 test("S1963-1 through S1963-22 resolve via the MSA guide, series-ID only", () => {
     assert.equal(
-        lookupSeries("S1963-1")[0].url,
+        lookup({ series: "S1963-1" })[0].url,
         "https://guide.msa.maryland.gov/pages/item.aspx?ID=S1963-1"
     );
 
     assert.equal(
-        lookupSeries("S1963-22")[0].url,
+        lookup({ series: "S1963-22" })[0].url,
         "https://guide.msa.maryland.gov/pages/item.aspx?ID=S1963-22"
     );
 });
@@ -26,17 +26,17 @@ test("S1963-1 through S1963-22 resolve via the MSA guide, series-ID only", () =>
 
 test("S1963-23, S1963-1001, S1963-3001 resolve to the exact given archive.org URLs", () => {
     assert.equal(
-        lookupSeries("S1963-23")[0].url,
+        lookup({ series: "S1963-23" })[0].url,
         "https://archive.org/details/reclaim-the-records-maryland-birth-certificates-1898-1910-s-1963-0023/Reclaim_The_Records_-_Maryland_Birth_Certificates_-_1898-1910_-_S1963-0023/"
     );
 
     assert.equal(
-        lookupSeries("S1963-1001")[0].url,
+        lookup({ series: "S1963-1001" })[0].url,
         "https://archive.org/details/reclaim-the-records-maryland-birth-certificates-1898-1910-s-1963-1001/Reclaim_The_Records_-_Maryland_Birth_Certificates_-_1898-1910_-_S1963-1001/"
     );
 
     assert.equal(
-        lookupSeries("S1963-3001")[0].url,
+        lookup({ series: "S1963-3001" })[0].url,
         "https://archive.org/details/reclaim-the-records-maryland-birth-certificates-1898-1910-s-1963-3001/Reclaim_The_Records_-_Maryland_Birth_Certificates_-_1898-1910_-_S1963-3001/"
     );
 });
@@ -44,7 +44,7 @@ test("S1963-23, S1963-1001, S1963-3001 resolve to the exact given archive.org UR
 
 test("S1963-2001 uses its confirmed collection-slug exception, distinct from its own number", () => {
     assert.equal(
-        lookupSeries("S1963-2001")[0].url,
+        lookup({ series: "S1963-2001" })[0].url,
         "https://archive.org/details/reclaim-the-records-maryland-birth-certificates-1898-1910-s-1963-2346/Reclaim_The_Records_-_Maryland_Birth_Certificates_-_1898-1910_-_S1963-2001/"
     );
 });
@@ -65,7 +65,7 @@ test("no-file records return an informative result with a null url, via both ser
 
     for (const testCase of noFileCases) {
 
-        const viaSeries = lookupSeries(`S1963-${testCase.number}`);
+        const viaSeries = lookup({ series: `S1963-${testCase.number}` });
         assert.equal(viaSeries.length, 1);
         assert.equal(viaSeries[0].url, null);
         assert.equal(viaSeries[0].label, "No cards are extant for this month and county");
@@ -101,9 +101,9 @@ test("S1963 does not handle Baltimore City or dates outside Aug 1898 - Apr 1910"
 
 
 test("S1963 series-ID lookup rejects numbers outside seriesIdRange", () => {
-    assert.equal(lookupSeries("S1963-0").length, 0);
-    assert.equal(lookupSeries("S1963-3265").length, 1);
-    assert.equal(lookupSeries("S1963-99999").length, 0);
+    assert.equal(lookup({ series: "S1963-0" }).length, 0);
+    assert.equal(lookup({ series: "S1963-3265" }).length, 1);
+    assert.equal(lookup({ series: "S1963-99999" }).length, 0);
 });
 
 

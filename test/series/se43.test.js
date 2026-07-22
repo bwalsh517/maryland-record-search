@@ -1,7 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const { lookup, lookupSeries } = require("../../src/index.js");
+const { lookup } = require("../../src/index.js");
 
 
 const locationDateCases = [
@@ -38,7 +38,7 @@ for (const testCase of locationDateCases) {
 
 
 test("SE43-345 series lookup resolves to the correct archive.org URL", () => {
-    const results = lookupSeries("SE43-345");
+    const results = lookup({ series: "SE43-345" });
 
     assert.equal(
         results[0].url,
@@ -80,7 +80,7 @@ test("SE43-3452 (Oct 1922, last missing-scan record) links to the MSA guide, not
 
 test("SE43-3222 (just before the gap) still resolves to archive.org normally", () => {
     assert.equal(
-        lookupSeries("SE43-3222")[0].url,
+        lookup({ series: "SE43-3222" })[0].url,
         "https://archive.org/details/reclaim-the-records-maryland-death-certificates-1910-1921-msa-se-43-2395-3222/Reclaim_The_Records_-_Maryland_Death_Certificates_1910-1921_-_msa_se43_-_03222/"
     );
 });
@@ -96,6 +96,6 @@ test("SE43-3453 (just after the gap, Nov 1922) still resolves to archive.org nor
 
 test("SE43-3453 through SE43-3475 all resolve to archive.org, not the MSA guide", () => {
     for (const n of [3453, 3460, 3475]) {
-        assert.ok(lookupSeries(`SE43-${n}`)[0].url.startsWith("https://archive.org/details/"));
+        assert.ok(lookup({ series: `SE43-${n}` })[0].url.startsWith("https://archive.org/details/"));
     }
 });

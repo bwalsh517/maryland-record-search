@@ -10,8 +10,8 @@ record certificate scans - birth and death - hosted on archive.org
 (via the Reclaim The Records project) or the Maryland State Archives
 guide.
 
-Given a county + month/year, a known series/file ID, or (for one
-series so far) a raw certificate number, it returns the URL for the
+Given a county + month/year, a known series/file ID, or (for several
+series) a raw certificate number, it returns the URL for the
 specific scanned file that record would be in. It has no UI of its
 own - `examples/basic-form/` ([live demo](https://bwalsh517.github.io/maryland-record-search/examples/basic-form/)) is a reference implementation showing how
 to wire it into a search form, but the library is designed to be
@@ -77,192 +77,114 @@ No published package yet - clone the repo and either:
 
 ### `lookup(options)`
 
-The main entry point. Always returns an array (possibly empty).
-**Never throws** - malformed input just yields no results.
+The single entry point. Provide whatever subset of fields you know;
+more fields means a more specific search.
 
-Two ways to call it:
+| Parameter | Type | Description |
+|---|---|---|
+| `location` | string | County name, or `"Baltimore City"`. Accepts loose forms too - unambiguous prefixes ("Wor" -> "Worcester"), a small alias table ("pg" -> "Prince George's"), and numeric county codes. |
+| `month` | number | 1-12. Omit to search the whole year. |
+| `year` | number | Required alongside `location`. Also used with `certificateNumber` (see below) when it has no embedded year prefix of its own. |
+| `series` | string | A known series/file ID, e.g. `"SE45-1037"`. Use this on its own instead of location/month/year. |
+| `certificateNumber` | string | A raw certificate number, e.g. `"B100000"` or `"1909-A50000"`. Use this on its own instead of location/month/year. |
+| `recordType` | string | `"death"` or `"birth"`. Optional - only needed when a query could plausibly match more than one record type. |
+
+**Returns:** an array of result objects (see [Result shape](#result-shape) below). Empty if nothing matches. Never throws.
 
 ```js
-// By location and date
-lookup({ location: "Anne Arundel", month: 5, year: 1910 });
-// -> [{ series: "SE43", number: 1, url: "https://archive.org/...", ... }]
-
-// By a known series/file ID
+// Series/file ID - direct lookup of a known citation
 lookup({ series: "SE45-1037" });
+
+// Certificate number - CM1132, CM1135, SE46, and CE502 support this;
+// check listSeries()'s supportsCertificateNumberSearch field first
+lookup({ certificateNumber: "1909-A50000", recordType: "birth" });
+
+// County + month + year
+lookup({ location: "Anne Arundel", month: 5, year: 1910, recordType: "death" });
+
+// County + year, month omitted - every file covering that county
+// across the whole year, useful when you don't know the month or
+// want to browse a year at once
+lookup({ location: "Anne Arundel", year: 1969, recordType: "death" });
 ```
 
-`location` is a Maryland county name (or `"Baltimore City"`). It's
-normalized loosely - exact names, unambiguous prefixes ("Wor" ->
-"Worcester"), a small alias table ("pg" -> "Prince George's"), and
-numeric county codes (`3` -> "Baltimore", `18` -> "Saint Mary's",
-`30` -> "Baltimore City") are all accepted. The numeric codes match
-the format the Baltimore County genealogy society's site returns in
-its own search results - the same legend also appears on Reclaim The
-Records' own archive.org listings for the Maryland death indices (see
-`COUNTY_CODES` in `src/core/counties.js` for the full table). Code 47
-(Washington, DC) and codes above 30 besides that are intentionally not
-included, since they're out-of-state and there's no Maryland location
-to resolve them to. Normalization happens
-once, before `canHandle()` decides which series to consider - not
-only later inside each series' own lookup - so a numeric code routes
-exactly the same way the matching name would. See
-`src/core/counties.js` for the full alias list.
-
-Once more than one record type is registered, pass `recordType`
-(`"death"` or `"birth"`) to disambiguate; omit it and every registered
-series is considered, same as today with death-only data.
-
-### `lookupYear(options)`
-
-All files covering one county (or `"Baltimore City"`) across every
-month of a given year - for when you don't know the month, or want to
-browse a whole year at once:
+**Certificate number + a separate `year` field.** `certificateNumber`
+may already carry its own `"YYYY-"` prefix (required for SE46/CE502,
+optional for CM1132/CM1135, and how MSA references certificate
+numbers for the years where it applies). A separate `year` field is
+only consulted when the string has no prefix of its own - an embedded
+prefix always wins. If both are present and disagree, that's an
+unresolvable query and this returns `[]` rather than guessing which
+one is right, the same as any other query that happens to match
+nothing.
 
 ```js
-lookupYear({ location: "Anne Arundel", year: 1969 });
-// -> one result per month, correctly spanning any series transition
-//    mid-year (e.g. SE44 ending and SE45 starting in the same year)
+lookup({ certificateNumber: "A50000", year: 1893, recordType: "birth" });
+// same result as:
+lookup({ certificateNumber: "1893-A50000", recordType: "birth" });
 ```
-
-Series that file certificates once per *year* rather than per month
-(the same file covers all 12 months for that county) are deduplicated
-to a single result rather than appearing 12 times. The same applies
-more generally to any file spanning multiple months but not the whole
-year (e.g. CM1132's certificate books) - each distinct file appears
-exactly once, at the first month it's found, not once per month it
-happens to cover.
-
-`lookup({ location, year, recordType })` with `month` omitted calls
-this automatically - `lookupYear` is exposed separately in case you
-want it without `lookup()`'s branching, or want the intent explicit
-in your own code.
-
-### `lookupSeries(seriesId)`
-
-Direct lookup of a known series/file, e.g. `"SE45-1037"`. Equivalent to
-`lookup({ series: seriesId })` - exposed separately since it's a common
-case (e.g. resolving a citation someone already has).
-
-### `lookupCertificate(certificateNumber, options)`
-
-Direct lookup by a raw certificate number, for the few series numbered
-in one continuous running sequence rather than per-county/per-date.
-Currently only CM1132 (Baltimore City death certificates) supports
-this - its numbering runs through un-lettered `1`-`100000`, then
-`A1`-`A100000`, `B1`-`B100000`, and so on through `G`. Equivalent to
-`lookup({ certificateNumber, recordType })`.
-
-```js
-lookupCertificate("B45678");
-// -> [{ series: "CM1132", number: 94, label: "Nos. B99667-C2499",
-//       url: "https://archive.org/details/.../",
-//       certificateNumber: "B45678",
-//       approximatePageUrl: "https://archive.org/details/.../page/n123/mode/1up" }]
-```
-
-`approximatePageUrl` is a deep link to roughly the right page within
-the scanned item, estimated from the certificate's position within
-that record's range (assuming ~1 certificate per scanned page - a
-rough estimate confirmed against one known anchor point, not a precise
-formula; see the comment on `lookupCertificateNumber()` in
-`src/series/cm1132.js`). If the estimate overshoots the item's actual
-page count, archive.org's viewer just lands on page 1 rather than
-breaking, so an imprecise estimate is harmless - just less useful for
-certificates near the end of a large range. Use `listSeries()`'s
-`supportsCertificateNumberSearch` field to check which series support
-this before relying on it.
-
-### `VERSION`
-
-`MDRecordSearch.VERSION` (or `VERSION` from `require("maryland-record-search")`)
-is the library's version string, matching `package.json`. Since the
-browser build has no access to `package.json` at all, this is how a
-caller can display or check the version at runtime - the example
-page's "Available series" heading shows it this way.
-
-### `REPOSITORY_URL` / `ISSUES_URL`
-
-`MDRecordSearch.REPOSITORY_URL` is this project's GitHub repo.
-`MDRecordSearch.ISSUES_URL` links directly to the data-correction
-issue template - the place to report a wrong result (see "On
-accuracy" above). Both are library-level constants, not part of
-`listSeries()`'s output, since they're the same for every series
-rather than something that varies per series. The example page uses
-`ISSUES_URL` for its "Report it" link, read from the library rather
-than hardcoded, so it can't drift out of sync.
 
 ### `listSeries()`
 
-Introspection helper - returns what's registered, without doing a
-lookup:
+Introspection helper - what series are registered, and what each one
+supports, without doing a lookup.
+
+**Returns:** an array with one entry per series:
+
+| Field | Type | Description |
+|---|---|---|
+| `name` | string | Series name, e.g. `"SE43"`. |
+| `recordType` | string | `"death"` or `"birth"`. |
+| `seriesHome` | string | URL of the series' MSA guide page. |
+| `dateRange` | object or null | `{ startYear, startMonth, endYear, endMonth }`. |
+| `seriesIdRange` | object or null | `{ start, end }`, the series' own numbering bounds. |
+| `supportsLocationSearch` | boolean | |
+| `supportsCertificateNumberSearch` | boolean | |
+| `certificateSearchRange` | object or null | Defaults to `dateRange` when certificate search is supported; narrower for a couple of series (see the generated docs). |
 
 ```js
 listSeries();
-// -> [{
-//      name: "SE43",
-//      recordType: "death",
-//      seriesHome: "...",
-//      dateRange: { startYear: 1910, startMonth: 5, endYear: 1951, endMonth: 6 },
-//      supportsLocationSearch: true,
-//      supportsCertificateNumberSearch: false,
-//      certificateSearchRange: null
-//    }, ...]
+// -> [{ name: "SE43", recordType: "death", dateRange: {...},
+//       supportsLocationSearch: true, ... }, ...]
 ```
 
-`dateRange` is the exact same data each series' `canHandle()` uses
-internally (via a shared `inDateRange()` helper on `BaseSeries`) - not
-a separately-maintained copy, so it can't silently drift out of sync
-with what a search actually does. The example page's "Available
-series" section is built entirely from `listSeries()`, including the
-timeline - see `examples/basic-form/app.js`.
-
-`startMonth`/`endMonth` can be `0` to mean "just a year, no month
-precision" - matching how the MSA guide sometimes lists a series'
-start or end as a bare year rather than a specific month. `0` on
-`startMonth` is treated as January (the earliest possible month that
-year) and `0` on `endMonth` as December (the latest), so the whole
-year is included in range checks either way - and the example page
-displays a bare year instead of a fabricated month when it sees `0`.
-
-`certificateSearchRange` is `null` when `supportsCertificateNumberSearch`
-is `false`. When certificate search is supported, it defaults to the
-series' own `dateRange` - most series that support certificate search
-at all cover their whole span, so "implemented" means the whole
-series unless a series explicitly says otherwise. SE46 is the one
-current exception: its certificate numbering has no location
-dimension at all after 1987, and 1973-1987 isn't covered by
-certificate lookup at all (see Known limitations below), so
-`certificateSearchRange` for SE46 is explicitly
-`{ startYear: 1988, startMonth: 0, endYear: 2014, endMonth: 0 }`,
-narrower than its full `dateRange` of 1973-2014.
-
 Use this to find out which series support location/date search vs.
-series-ID-only lookup today (see Known limitations below) before
-building UI around it.
+series-ID-only lookup before building UI around it (see Known
+limitations below).
 
 ### Result shape
 
-```js
-{
-  series: "SE43",           // series name
-  seriesType: "death",      // record type
-  seriesHome: "http://...", // MSA guide page for this series
-  location: "Anne Arundel", // normalized county name, or null
-  year: 1910,
-  month: 5,                 // null if the file covers the whole year
-  number: 1,                // file number within the series
-  label: "",                // surname-range label, e.g. "A-K", if the file was split
-  url: "https://archive.org/details/..."
-}
-```
+Every `lookup()` call returns an array of objects shaped like this:
+
+| Field | Type | Description |
+|---|---|---|
+| `series` | string | Series name, e.g. `"SE43"`. |
+| `seriesType` | string | `"death"` or `"birth"`. |
+| `seriesHome` | string | URL of the series' MSA guide page. |
+| `location` | string or null | Normalized county name. |
+| `year` | number or null | |
+| `month` | number or null | 1-12, or null if the file covers the whole year. |
+| `number` | number or null | File number within the series. |
+| `label` | string | Extra detail, e.g. a surname range, if the file was split. Empty string otherwise. |
+| `url` | string or null | A scan or MSA guide URL. |
+| `msaGuideUrl` | string or null | MSA's own page for this number, independent of `url`. |
+| `part` | number or null | Distinguishes a multipart record's spans from each other. Almost always null. |
+| `sortWeight` | number | 0 for an ordinary result; higher sorts after ordinary results. |
+| `certificateNumber` | string or null | Set only when the result came from a certificate-number lookup. |
+| `approximatePageUrl` | string or null | An approximate deep link into the scan, set only where computed. |
+
+### `VERSION`, `REPOSITORY_URL`, `ISSUES_URL`
+
+Library-level constants. `VERSION` matches `package.json` (the
+browser build can't read `package.json` directly). `ISSUES_URL` links
+to the data-correction issue template - see "On accuracy" above.
 
 ### Detailed validation errors
 
 `lookup()` swallows errors so it's safe to call with untrusted input.
-If you want to validate a location string yourself and see *why* it
-failed (e.g. to show the user a helpful message), call
-`counties.normalizeCounty()` directly - it throws a `CountyNotFoundError`
-with the offending value attached.
+To validate a location string yourself and see *why* it failed, call
+`counties.normalizeCounty()` directly - it throws a
+`CountyNotFoundError` with the offending value attached:
 
 ```js
 const { counties } = require("maryland-record-search");
@@ -276,6 +198,14 @@ try {
 }
 ```
 
+### Full reference
+
+The tables above cover what most integrations need. For every field's
+exact type and every edge case documented in code, see the generated
+reference at
+[bwalsh517.github.io/maryland-record-search/docs/](https://bwalsh517.github.io/maryland-record-search/docs/),
+rebuilt on every deploy.
+
 ## Project structure
 
 ```
@@ -285,7 +215,7 @@ src/
     counties.js          - county name normalization + aliases
     base-series.js        - abstract class every series extends
     series-registry.js   - the list of registered series instances
-    lookup.js             - lookup() / lookupSeries() / listSeries()
+    lookup.js             - lookup() / listSeries()
   series/
     se42.js, se43.js, ...  - one file per archive.org series
   index.js                - Node/bundler entry point
@@ -298,22 +228,36 @@ test/
 ## Adding a new series (including birth certificates)
 
 1. Copy an existing series file in `src/series/` as a starting point -
-   `cm1135.js` is the simplest (series-ID lookup only), `se43.js` is
-   the most complete (also does location/date search, including
-   surname-range file splits).
+   `s1988.js` is the simplest (location/date + series-ID search, no
+   certificate-number search), `se43.js` is the most complete simple
+   case (also does surname-range file splits), and `cm1135.js` is
+   worth a look if your series needs certificate-number search too,
+   though it's a more involved example (see "Known limitations" below
+   for why).
 2. Extend `BaseSeries`, call `super(name, recordType)` - use `"birth"`
    for a birth certificate series.
 3. Set `this.dateRange = { startYear, startMonth, endYear, endMonth }`
-   in the constructor, and have `canHandle(location, month, year)` call
+   and `this.seriesIdRange = { start, end }` in the constructor, and
+   have `canHandle(location, month, year)` call
    `this.inDateRange(month, year)` (plus whatever location check the
    series needs) rather than comparing inline literals - this is what
    `listSeries()` reports as the timeline, so it needs to be the same
    data actually driving search, not a separate copy. Use `0` for
    `startMonth`/`endMonth` if the MSA guide only gives a bare year for
-   that boundary rather than a specific month.
-4. Provide `ARCHIVE_RANGES` at minimum. Add `buildIndex()` +
-   `lookupLocationMonthYear()` if the series should support
-   location/date search, not just direct series-ID lookup.
+   that boundary rather than a specific month. `seriesIdRange` is what
+   keeps a series-ID or certificate-number lookup for a number that
+   was never actually generated (`0`, negative, or past the series'
+   real end) from returning a plausible-looking but wrong URL - see
+   `test/core/series-id-range.test.js`.
+4. `ARCHIVE_RANGES` is optional, not mandatory - a series with nothing
+   better than the MSA guide to link to needs neither `ARCHIVE_RANGES`
+   nor an `archiveUrl()` override at all; `BaseSeries.archiveUrl()`
+   already falls back to the MSA guide page using `seriesIdRange`
+   alone. Provide `ARCHIVE_RANGES` (table-based lookup) or override
+   `archiveUrl()` directly only if real archive.org scans exist to
+   link to. Add `buildIndex()` + `lookupLocationMonthYear()` if the
+   series should support location/date search, not just direct
+   series-ID lookup.
 5. Register the instance in `src/core/series-registry.js`.
 6. Add a test file under `test/series/`.
 
@@ -326,28 +270,72 @@ just data, not something to try to generalize into a formula.
 ## Known limitations (not yet implemented)
 
 - **CM1132** (death, Baltimore City, 1874-1950): fully implemented
-  location/date, series-ID, and certificate-number search - the only
-  series with certificate-number lookup so far. Its records span
-  multiple months (unlike the county grids' per-month/per-year files),
-  so each result's `label` leads with the record's actual date span
-  (e.g. `"01/1914-04/1914 Nos. C71526-C74735"`), not just the
+  location/date, series-ID, and certificate-number search. Its records
+  span multiple months (unlike the county grids' per-month/per-year
+  files), so each result's `label` leads with the record's actual date
+  span (e.g. `"01/1914-04/1914 Nos. C71526-C74735"`), not just the
   certificate range - a single hit already tells you the full window
-  it covers. `lookupYear()` correctly shows each physical file once
-  even though it's queried once per month, rather than once per month
-  it happens to cover. A date search on a month shared between two
+  it covers. A year-level search (`lookup({ location, year, recordType })`
+  with `month` omitted) correctly shows each physical file once even
+  though it's queried once per month internally, rather than once per
+  month it happens to cover. A date search on a month shared between two
   consecutive records' overlapping ranges (they deliberately overlap
   by one month) returns both, not a guess at which one is right; and
   `approximatePageUrl` from certificate lookup is a rough estimate (~1
   certificate per scanned page, confirmed against one anchor point),
   not a precise page number. One confirmed unused record (CM1132-244,
   "previously a duplicate entry") returns an informative result with a
-  null `url` rather than a broken or misleading link.
+  null `url` rather than a broken or misleading link. Certificate
+  lookup also accepts an optional `"YYYY-"` prefix (see `lookup()`'s
+  certificate number handling above) - not needed to identify a record here
+  since no letter block is ever reused, but validated against the
+  record's actual date if given, for a consistent search format with
+  CM1135 below.
 
-- **CM1135** (birth, 1875-1972, Baltimore City only): series-ID search
-  only - no location/date search implemented. Its `dateRange` uses
-  `startMonth: 0` and `endMonth: 0` since only years were given, not
-  specific months (see the `month: 0` convention documented under
-  `listSeries()` above).
+- **CM1135** (birth, 1875-1972, Baltimore City only): fully implemented
+  location/date, series-ID, and certificate-number search - CM1135-1
+  through CM1135-322 (through 12/1947) are transcribed as an explicit
+  per-record table (`src/series/cm1135-data.js`); the series switches
+  to a `"YYYY-NNNNN"` certificate format after that and isn't
+  transcribed yet, so `certificateSearchRange` is narrower than the
+  series' full `dateRange` (see `listSeries()` above). Its `dateRange`
+  uses `startMonth: 0` and `endMonth: 0` since only years were given
+  for the untranscribed tail, not specific months.
+
+  Unlike CM1132, this series' letter blocks are **not** one continuous
+  sequence - `A` and `B` each cycle through the full `1`-`100000` range
+  twice before `C`-`G` (so far), so a bare letter+number like
+  `"A50000"` is genuinely ambiguous between two real certificates.
+  A certificate-number lookup returns every matching record in that
+  case; the optional `"YYYY-"` prefix (see `lookup()`'s certificate
+  number handling above) narrows to just the one covering that year.
+  A trailing suffix letter on a
+  few certificate numbers (e.g. `"G33501D"`) works the same way CE502's
+  confirmed duplicate suffix does - matches with or without it, narrows
+  to just that boundary with it.
+
+  CM1135-113 covers two disjoint date spans on one physical record
+  (kept as a single record with a list of date parts rather than two
+  separate entries, so it can't get split apart later) - a month search
+  only ever returns one hit for it, a year search correctly returns
+  both.
+
+  CM1135-25 through 29 are five multi-year batches of certificates
+  filed out of chronological order under their own `"L"` prefix instead
+  of a normal date-based slot (their year spans also overlap each other
+  and the main sequence). A location/date search always returns these
+  after every main-sequence match, sorted narrowest year-span first,
+  rather than mixed in with more specific hits.
+
+  A few source oddities are carried through as transcribed, not
+  corrected: three certificate boundaries (including the `"D"` suffix
+  example above) have an unexplained trailing letter, CM1135-302's date
+  looks like a one-year typo against its neighbors, CM1135-113's date
+  overlaps CM1135-112's more than the usual single-month boundary, and
+  CM1135-241 is past the 100-year public-access restriction so its
+  certificate range is set to the numeric gap between the surrounding
+  records and labeled an estimate in its result rather than confirmed
+  data.
 
 - **S1963** (birth, Aug 1898 - Apr 1910): fully implemented location/date
   and series-ID search, including 11 known "no file" records (they
@@ -424,8 +412,7 @@ just data, not something to try to generalize into a formula.
   series-ID lookup works for that range. Everything from record 22
   onward (May 1898 through the end of the series) is fully indexed.
 - **"Unknown month" is now supported** - `lookup({ location, year })`
-  with `month` omitted searches every month of that year (see
-  `lookupYear()`).
+  with `month` omitted searches every month of that year.
 - **S1988** (birth, May 1910 - Dec 1913) is registered and its
   location/date grid is fully implemented, but the archive.org URL
   range for file numbers past 1000 is a provisional estimate (1012,

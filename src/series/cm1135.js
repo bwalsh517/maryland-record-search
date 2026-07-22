@@ -26,9 +26,9 @@ if (typeof require !== "undefined") {
     /**
      * "LETTER?NUMBER[SUFFIX]" - e.g. "A50000", "G33501D", "L609". The
      * optional "YYYY-" prefix and legacy "A-50000" dash style are
-     * already stripped by the time this runs - see
-     * BaseSeries.splitCertificateQuery(), called from
-     * lookupCertificateNumber() below. "L" numbers are a completely
+     * already stripped by the time this runs - lookup.js's
+     * lookupCertificate() does that via BaseSeries.splitCertificateQuery()
+     * before this series is even chosen. "L" numbers are a completely
      * separate namespace (the lost-number sets, see
      * lookupCertificateNumber() below), not part of the main A-G
      * letter cycle.
@@ -74,6 +74,13 @@ if (typeof require !== "undefined") {
             // dateRange above, same pattern SE46 uses for its own partial
             // certificate coverage.
             this.certificateSearchRange = { startYear: 1875, startMonth: 1, endYear: 1947, endMonth: 12 };
+
+            // Every scanned item in this series has 4 non-certificate
+            // pages (title page, index, etc.) before the certificates
+            // actually start - confirmed directly against the scans.
+            // See DATE_CERT_RECORDS entries' own pageNumberStart for a
+            // record whose item is confirmed to differ.
+            this.pageNumberStart = 4;
 
             // Standard 50-file-per-collection range table, same shape
             // as CM1132/CE502 - no archiveUrl() override needed for
@@ -185,20 +192,22 @@ if (typeof require !== "undefined") {
          * "A" and "B" each cycle through the full 1-100000 range twice
          * before C-G (so far), so a bare letter+number is genuinely
          * ambiguous and this returns every record whose segment contains
-         * it (see cm1135-data.js's header comment). An optional "YYYY-"
-         * prefix narrows to record(s) whose date actually covers that
-         * year. A trailing suffix (e.g. the "D" in "G33501D") only
-         * matters at the exact boundary number it was transcribed on -
-         * querying with it narrows to that boundary; querying without it
-         * matches regardless, same as CE502's confirmed "3000"/"3000A"
-         * duplicate-certificate handling.
+         * it (see cm1135-data.js's header comment). year, resolved from
+         * an optional "YYYY-" prefix by lookup.js's lookupCertificate()
+         * before this series is even chosen (see
+         * BaseSeries.splitCertificateQuery()), narrows to record(s)
+         * whose date actually covers that year. A trailing suffix (e.g.
+         * the "D" in "G33501D") only matters at the exact boundary
+         * number it was transcribed on - querying with it narrows to
+         * that boundary; querying without it matches regardless, same
+         * as CE502's confirmed "3000"/"3000A" duplicate-certificate
+         * handling.
          *
          * "L" numbers are a separate, non-overlapping namespace (the
          * lost-number sets) and always resolve to exactly one record.
          */
-        lookupCertificateNumber(input) {
+        lookupCertificateNumber(rest, year = null) {
 
-            const { year, rest } = this.splitCertificateQuery(input);
             const parsed = parseLetterNumberSuffix(rest);
 
             if (!parsed) {
@@ -291,18 +300,17 @@ if (typeof require !== "undefined") {
                             number === segment.end ? segment.endSuffix : null;
 
                     // Same page-jump math as CM1132: one certificate per
-                    // scanned page, first certificate in the range lands
-                    // on page 1 (position 1, minus 1, floored at 1 - see
-                    // CM1132's own lookupCertificateNumber() for why the
-                    // floor exists). Only meaningful when this record has
-                    // a real archive.org scan (findArchiveRange() is the
-                    // same check BaseSeries.archiveUrl() uses internally
-                    // to decide between a scan link and the MSA guide
+                    // scanned page after the item's leading pages (see
+                    // pageForPosition() on BaseSeries and this.pageNumberStart
+                    // above). Only meaningful when this record has a real
+                    // archive.org scan (findArchiveRange() is the same
+                    // check BaseSeries.archiveUrl() uses internally to
+                    // decide between a scan link and the MSA guide
                     // fallback) - CM1135-151 onward has no scan to jump
                     // into, so no page link is possible there regardless
                     // of the certificate number searched for.
-                    const position = number - segment.start + 1;
-                    const page = Math.max(1, position - 1);
+                    const position = number - segment.start;
+                    const page = this.pageForPosition(position, record.pageNumberStart);
 
                     results.push(this.createResult({
                         location: "Baltimore City",
