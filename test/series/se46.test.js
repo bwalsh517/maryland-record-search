@@ -499,3 +499,43 @@ test("regression: the September 1978 Caroline split-range chain resolves correct
     assert.equal(harford.number, 1874);
     assert.equal(harford.location, "Harford");
 });
+
+
+test("regression: SE46-160's range was corrected but never actually written until a later pass caught it", () => {
+
+    const result = lookup({ certificateNumber: "1973-15920", recordType: "death" })[0];
+
+    assert.equal(result.number, 160);
+    assert.equal(result.location, "Wicomico");
+});
+
+
+test("sourceStatus marks every 1973-1979 record individually checked against the scan, distinguishing verified matches from corrections", () => {
+
+    const DATA = require("../../src/series/se46-data.js");
+
+    const corrected = DATA.CERT_RANGES_1973_1979.filter(r => r.sourceStatus === "corrected");
+    const verified = DATA.CERT_RANGES_1973_1979.filter(r => r.sourceStatus === "verified");
+    const unmarked = DATA.CERT_RANGES_1973_1979.filter(r => !r.sourceStatus);
+
+    assert.equal(corrected.length, 87);
+    assert.equal(verified.length, 29);
+    assert.equal(unmarked.length, DATA.CERT_RANGES_1973_1979.length - 116);
+
+    // A record confirmed unchanged from the source is unmarked, not "verified" -
+    // it was never individually checked, just never needed to be.
+    const neverChecked = DATA.CERT_RANGES_1973_1979.find(r => r.number === 15);
+    assert.equal(neverChecked.sourceStatus, undefined);
+
+    // A record that matched the source exactly when checked.
+    const matchedOnCheck = DATA.CERT_RANGES_1973_1979.find(r => r.number === 1874);
+    assert.equal(matchedOnCheck.sourceStatus, "verified");
+
+    // A record whose range genuinely differs from the MSA guide.
+    const differs = DATA.CERT_RANGES_1973_1979.find(r => r.number === 1839);
+    assert.equal(differs.sourceStatus, "corrected");
+
+    // KNOWN_CERT_RANGES (December Worcester) uses the same field.
+    assert.equal(DATA.KNOWN_CERT_RANGES[325].sourceStatus, "corrected");
+    assert.equal(DATA.KNOWN_CERT_RANGES[1942].sourceStatus, "corrected");
+});
