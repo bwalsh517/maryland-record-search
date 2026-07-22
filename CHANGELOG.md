@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.3.1
+
+### Fixed
+
+- S1963 records 2002-3000 now resolve to the correct archive.org
+  collection. Archive.org files this series in shared blocks
+  (23-1000, 1001-2000, 2001-3000, 3001-3265), same structure as
+  CM1132 and S1988, not one item per record. The existing fix for
+  record 2001 only patched that single number's collection name;
+  every other number in that block still built a nonexistent
+  collection from its own number. Confirmed against the actual
+  archive.org item, which holds files for 3001 through 3265 under
+  one collection.
+
 ## 1.3.0
 
 ### Added
