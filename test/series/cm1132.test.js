@@ -7,7 +7,7 @@ const { lookup, listSeries } = require("../../src/index.js");
 test("CM1132-30 and CM1132-31 resolve to the correct archive.org URLs", () => {
     assert.equal(
         lookup({ series: "CM1132-30" })[0].url,
-        "https://archive.org/details/reclaim-the-records-baltimore-city-death-certificates-1875-1921-msa-cm-1132-00001-30/Reclaim_The_Records_-_Baltimore_City_Death_Certificates_1875-1921_-_msa_cm1132_-_00030/"
+        "https://archive.org/details/reclaim-the-records-baltimore-city-death-certificates-1875-1921-msa-cm-1132-00001-30/Reclaim_The_Records_-_Baltimore_City_Death_Certificates_1875-1921_-_msa_cm1132_-_00001/"
     );
 
     assert.equal(
@@ -17,12 +17,53 @@ test("CM1132-30 and CM1132-31 resolve to the correct archive.org URLs", () => {
 });
 
 
+test("records 1-30 resolve to their real archive.org number, one off from the MSA number", () => {
+    // MSA-30 is filed under archive.org's 00001. Every other number in
+    // the block is filed one higher than its real number.
+    const cases = [
+        [1, 2],
+        [2, 3],
+        [3, 4],
+        [29, 30],
+        [30, 1]
+    ];
+
+    for (const [msaNumber, archiveNumber] of cases) {
+        const url = lookup({ series: `CM1132-${msaNumber}` })[0].url;
+        const padded = String(archiveNumber).padStart(5, "0");
+
+        assert.ok(
+            url.endsWith(`_${padded}/`),
+            `CM1132-${msaNumber} should resolve to archive.org number ${archiveNumber}, got ${url}`
+        );
+    }
+});
+
+
+test("records 1-30 carry a label note about the archive.org numbering mismatch", () => {
+    const bySeriesId = lookup({ series: "CM1132-1" })[0];
+    assert.equal(bySeriesId.label, "(mislabeled as CM1132-2 at archive.org)");
+
+    const byDate = lookup({ location: "Baltimore City", month: 1, year: 1875, recordType: "death" })[0];
+    assert.equal(byDate.label, "12/1874-05/1875 Nos. 1-2830 (mislabeled as CM1132-2 at archive.org)");
+
+    // Confirmed against the actual scan: MSA-30's certs (95001-98450)
+    // are filed under archive.org's 00001, shown there as "CM1132-1".
+    const msa30 = lookup({ series: "CM1132-30" })[0];
+    assert.equal(msa30.label, "(mislabeled as CM1132-1 at archive.org)");
+
+    // Record 31 and beyond are unaffected.
+    const byDate31 = lookup({ certificateNumber: "99000", recordType: "death" })[0];
+    assert.equal(byDate31.label, "Nos. 98451-A1974");
+});
+
+
 test("date search returns a single record for a non-boundary month", () => {
     const results = lookup({ location: "Baltimore City", month: 1, year: 1875, recordType: "death" });
 
     assert.equal(results.length, 1);
     assert.equal(results[0].number, 1);
-    assert.equal(results[0].label, "12/1874-05/1875 Nos. 1-2830");
+    assert.equal(results[0].label, "12/1874-05/1875 Nos. 1-2830 (mislabeled as CM1132-2 at archive.org)");
 });
 
 
