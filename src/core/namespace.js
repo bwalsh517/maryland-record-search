@@ -19,7 +19,7 @@
     // access to package.json at all. test/core/version.test.js checks
     // the two match, so a mismatch fails the test suite rather than
     // drifting silently.
-    global.MDRecordSearch.VERSION = "1.2.0";
+    global.MDRecordSearch.VERSION = "1.3.0";
 
     // Where to report a wrong result (a wrong location, month, or
     // series linked - that's a fixable bug) or a data-correction issue
