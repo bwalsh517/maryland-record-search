@@ -120,10 +120,14 @@ if (typeof require !== "undefined") {
             // of 7031 - see lookupSeries() below.
             this.seriesIdRange = { start: 1, end: 7215 };
 
-            // Certificate search covers 1988-2014, not the whole
-            // series - see lookupCertificateNumber() below (no
-            // location dimension exists after 1987 at all, and
-            // 1973-1987 isn't covered by certificate lookup yet).
+            // Certificate search covers 1988-2014, plus 1973-1979 now
+            // that a full decade of ranges has been validated - see
+            // lookupCertificateNumber() below. This field can't
+            // represent that as a single range without also claiming
+            // 1980-1987 (not yet validated) - left at its old,
+            // conservative value pending a decision on how to
+            // represent disjoint coverage. See CERT_RANGES_1973_1979
+            // in se46-data.js and TODO.md.
             this.certificateSearchRange = { startYear: 1988, startMonth: 0, endYear: 2014, endMonth: 0 };
 
             // No leading pages before the first certificate in this
@@ -362,6 +366,28 @@ if (typeof require !== "undefined") {
                 record = DATA.RECORDS_1988_1989.find(r =>
                     r.year === year && cert >= r.certStart && cert <= r.certEnd
                 );
+            } else if (year >= 1973 && year <= 1979) {
+
+                // December Worcester also catches that year's late
+                // files, so it's checked separately via the same
+                // KNOWN_CERT_RANGES table lookupSeries() already uses,
+                // rather than duplicating its range here.
+                const decemberWorcester = this.lookupLocationMonthYear("Worcester", 12, year)[0];
+                const decemberRange = decemberWorcester && DATA.KNOWN_CERT_RANGES[decemberWorcester.number];
+
+                if (decemberRange && cert >= decemberRange.certStart && cert <= decemberRange.certEnd) {
+                    record = {
+                        number: decemberWorcester.number,
+                        certStart: decemberRange.certStart,
+                        certEnd: decemberRange.certEnd,
+                        location: "Worcester",
+                        month: 12
+                    };
+                } else {
+                    record = DATA.CERT_RANGES_1973_1979.find(r =>
+                        r.year === year && cert >= r.certStart && cert <= r.certEnd
+                    );
+                }
             } else if (DATA.YEAR_METADATA[year]) {
 
                 const { firstNumber, lastNumber, totalCerts } = DATA.YEAR_METADATA[year];
@@ -433,6 +459,8 @@ if (typeof require !== "undefined") {
                 this.createResult({
                     year,
                     number: record.number,
+                    location: record.location || null,
+                    month: record.month || null,
                     label: `Nos. ${record.certStart}-${record.certEnd}`,
                     certificateNumber: `${year}-${cert}`,
                     url,
