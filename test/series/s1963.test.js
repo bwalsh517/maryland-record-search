@@ -42,12 +42,39 @@ test("S1963-23, S1963-1001, S1963-3001 resolve to the exact given archive.org UR
 });
 
 
-test("S1963-2001 uses its confirmed collection-slug exception, distinct from its own number", () => {
+test("S1963-2001 uses its block's confirmed collection name, distinct from its own number", () => {
     assert.equal(
         lookup({ series: "S1963-2001" })[0].url,
         "https://archive.org/details/reclaim-the-records-maryland-birth-certificates-1898-1910-s-1963-2346/Reclaim_The_Records_-_Maryland_Birth_Certificates_-_1898-1910_-_S1963-2001/"
     );
 });
+
+
+test("records that aren't the first in their archive.org block keep the block's collection name", () => {
+    // Regression test: archive.org files these in shared blocks, not
+    // one item per record. A record partway through a block previously
+    // got its own (wrong) collection name instead of the block's.
+    assert.equal(
+        lookup({ series: "S1963-24" })[0].url,
+        "https://archive.org/details/reclaim-the-records-maryland-birth-certificates-1898-1910-s-1963-0023/Reclaim_The_Records_-_Maryland_Birth_Certificates_-_1898-1910_-_S1963-0024/"
+    );
+
+    assert.equal(
+        lookup({ series: "S1963-1002" })[0].url,
+        "https://archive.org/details/reclaim-the-records-maryland-birth-certificates-1898-1910-s-1963-1001/Reclaim_The_Records_-_Maryland_Birth_Certificates_-_1898-1910_-_S1963-1002/"
+    );
+
+    assert.equal(
+        lookup({ series: "S1963-2002" })[0].url,
+        "https://archive.org/details/reclaim-the-records-maryland-birth-certificates-1898-1910-s-1963-2346/Reclaim_The_Records_-_Maryland_Birth_Certificates_-_1898-1910_-_S1963-2002/"
+    );
+
+    assert.equal(
+        lookup({ series: "S1963-3002" })[0].url,
+        "https://archive.org/details/reclaim-the-records-maryland-birth-certificates-1898-1910-s-1963-3001/Reclaim_The_Records_-_Maryland_Birth_Certificates_-_1898-1910_-_S1963-3002/"
+    );
+});
+
 test("no-file records return an informative result with a null url, via both series-ID and location/date search", () => {
     const noFileCases = [
         { number: 40, location: "Saint Mary's", month: 8, year: 1898 },
