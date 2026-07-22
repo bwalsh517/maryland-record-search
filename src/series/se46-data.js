@@ -1668,6 +1668,11 @@ if (typeof require !== "undefined") {
         { number: 670, month: 1, year: 1975, location: "Talbot", certStart: 2538, certEnd: 2574, sourceStatus: "verified" },
         { number: 671, month: 1, year: 1975, location: "Washington", certStart: 2575, certEnd: 2687, sourceStatus: "corrected" },
         { number: 672, month: 1, year: 1975, location: "Wicomico", certStart: 2688, certEnd: 2762, sourceStatus: "verified" },
+        // 2775 (this record's own highest number) is scanned out of
+        // numerical order, between 2765 and 2766 - same shape as
+        // SE46-3901's known quirk. Fine for the range itself; not
+        // accounted for in page-jump math yet, pending the same
+        // future handling as SE46-3901.
         { number: 673, month: 1, year: 1975, location: "Worcester", certStart: 2763, certEnd: 2775, sourceStatus: "corrected" },
         { number: 674, month: 2, year: 1975, location: "Allegany", certStart: 2776, certEnd: 2860, sourceStatus: "verified" },
         { number: 675, month: 2, year: 1975, location: "Anne Arundel", certStart: 2861, certEnd: 2991 },
@@ -2026,6 +2031,10 @@ if (typeof require !== "undefined") {
         { number: 1029, month: 3, year: 1976, location: "Baltimore City (A-J)", certStart: 6369, certEnd: 6864 },
         { number: 1030, month: 3, year: 1976, location: "Baltimore City (J-Z)", certStart: 6865, certEnd: 7409 },
         { number: 1031, month: 3, year: 1976, location: "Calvert", certStart: 7410, certEnd: 7429 },
+        // Certificates 7439 and 7440 are scanned out of numerical
+        // order - the real page order is 7438, 7440, 7439. Same shape
+        // as SE46-3901's known quirk; not accounted for in page-jump
+        // math yet, pending the same future handling as SE46-3901.
         { number: 1032, month: 3, year: 1976, location: "Caroline", certStart: 7430, certEnd: 7440, sourceStatus: "corrected" },
         { number: 1033, month: 3, year: 1976, location: "Carroll", certStart: 7441, certEnd: 7490, sourceStatus: "verified" },
         { number: 1034, month: 3, year: 1976, location: "Cecil", certStart: 7491, certEnd: 7511 },
