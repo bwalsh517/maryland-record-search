@@ -50,6 +50,45 @@ if (typeof require !== "undefined") {
     }
 
 
+    // Records 1-30's scanned items are filed on archive.org one position
+    // off from their real MSA numbers - MSA-30 is filed under
+    // archive.org's 00001, and every other number in the block is
+    // filed one higher than its real number (MSA-1 under 00002, MSA-2
+    // under 00003, ... MSA-29 under 00030). Confirmed by opening the
+    // actual scans and matching their certificate numbers against
+    // DATE_CERT_RECORDS below. This is an archive.org filing quirk, not
+    // a records anomaly - only the URL and its label note are affected,
+    // nothing about the record's real date/certificate data.
+    function archiveOrgNumber(number) {
+
+        if (number < 1 || number > 30) {
+            return number;
+        }
+
+        return number === 30 ? 1 : number + 1;
+    }
+
+    function archiveNumberNote(number, seriesName) {
+
+        const archiveNumber = archiveOrgNumber(number);
+
+        return archiveNumber === number
+            ? null
+            : `mislabeled as ${seriesName}-${archiveNumber} at archive.org`;
+    }
+
+    function withArchiveNote(label, number, seriesName) {
+
+        const note = archiveNumberNote(number, seriesName);
+
+        if (!note) {
+            return label;
+        }
+
+        return label ? `${label} (${note})` : `(${note})`;
+    }
+
+
     function formatRecordDateRange(date) {
 
         const start = `${String(date.startMonth).padStart(2, "0")}/${date.startYear}`;
@@ -395,15 +434,17 @@ if (typeof require !== "undefined") {
 
 
         // File 31 lives directly at the item root, not under a
-        // per-file prefix like every other number in this series -
-        // that's the only reason this override exists.
+        // per-file prefix like every other number in this series.
+        // Records 1-30 also need their real MSA number translated to
+        // the number archive.org actually filed them under (one
+        // higher, wrapping 30 back to 1) - see archiveOrgNumber() above.
         buildArchiveUrl(range, number) {
 
             if (number === 31) {
                 return "https://archive.org/details/" + range.collection;
             }
 
-            return super.buildArchiveUrl(range, number);
+            return super.buildArchiveUrl(range, archiveOrgNumber(number));
         }
 
 
@@ -426,7 +467,10 @@ if (typeof require !== "undefined") {
                 ];
             }
 
-            return super.lookupSeries(seriesId);
+            return super.lookupSeries(seriesId).map(result => ({
+                ...result,
+                label: withArchiveNote(result.label, number, this.name)
+            }));
         }
 
 
@@ -466,7 +510,7 @@ if (typeof require !== "undefined") {
                     year,
                     month,
                     number: record.number,
-                    label: `${formatRecordDateRange(record.date)} ${certLabel}`,
+                    label: withArchiveNote(`${formatRecordDateRange(record.date)} ${certLabel}`, record.number, this.name),
                     url: this.archiveUrl(record.number)
                 });
             });
@@ -540,7 +584,7 @@ if (typeof require !== "undefined") {
                     number: record.number,
                     year: record.date ? record.date.startYear : null,
                     month: record.date ? record.date.startMonth : null,
-                    label: record.cert.label,
+                    label: withArchiveNote(record.cert.label, record.number, this.name),
                     certificateNumber: formatCertificateNumber(linear),
                     url,
                     approximatePageUrl:
