@@ -386,15 +386,7 @@ test("listSeries() reports SE46 with both location and certificate-number search
     assert.equal(series.supportsLocationSearch, true);
     assert.equal(series.supportsCertificateNumberSearch, true);
 
-    // Certificate search covers a genuinely narrower range than the
-    // series itself (1988-2014 vs the full 1973-2014, since 1973-1987
-    // isn't covered by certificate lookup) - explicitly set, not
-    // defaulted, since this is the one series where the default
-    // (matching dateRange) wouldn't be accurate.
-    assert.deepEqual(series.certificateSearchRange, {
-        startYear: 1988, startMonth: 0, endYear: 2014, endMonth: 0
-    });
-    assert.notDeepEqual(series.certificateSearchRange, series.dateRange);
+    assert.deepEqual(series.certificateSearchRange, series.dateRange);
 });
 
 

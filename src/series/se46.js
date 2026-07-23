@@ -120,14 +120,10 @@ if (typeof require !== "undefined") {
             // of 7031 - see lookupSeries() below.
             this.seriesIdRange = { start: 1, end: 7215 };
 
-            // Certificate search now covers the whole 1973-1987 grid
-            // era, plus 1988-2014 - see lookupCertificateNumber()
-            // below. That's every year with no gap left, so this field
-            // could now honestly become one continuous range
-            // (1973-2014) - left at its old value for now since
-            // updating it wasn't part of what this data patch was
-            // asked to do. See CERT_RANGES_1973_1987 in se46-data.js.
-            this.certificateSearchRange = { startYear: 1988, startMonth: 0, endYear: 2014, endMonth: 0 };
+            // certificateSearchRange isn't set explicitly here - it
+            // matches dateRange, so it falls back to dateRange per
+            // lookup.js's existing convention. See CERT_RANGES_1973_1987
+            // in se46-data.js.
 
             // No leading pages before the first certificate in this
             // series' scans (unlike CM1132/CM1135) - stated explicitly
