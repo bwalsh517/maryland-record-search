@@ -551,3 +551,40 @@ test("sourceStatus marks every 1973-1987 record individually checked against the
     assert.equal(DATA.KNOWN_CERT_RANGES[325].sourceStatus, "corrected");
     assert.equal(DATA.KNOWN_CERT_RANGES[1942].sourceStatus, "corrected");
 });
+
+
+test("regression: SPLIT_MONTHS is derived from CERT_RANGES_1973_1987, not authored separately", () => {
+
+    const DATA = require("../../src/series/se46-data.js");
+
+    assert.equal(Object.keys(DATA.SPLIT_MONTHS).length, 180);
+
+    const jan1973Baltimore = DATA.SPLIT_MONTHS["01/1973"]["Baltimore"];
+    assert.deepEqual(jan1973Baltimore, [
+        { label: "A-O", certStart: 234, certEnd: 504 },
+        { label: "P-Z", certStart: 505, certEnd: 649 }
+    ]);
+});
+
+
+test("regression: certificate lookup returns a clean location for split records, not the raw '(A-O)' string", () => {
+
+    const result = lookup({ certificateNumber: "1973-300", recordType: "death" })[0];
+
+    assert.equal(result.location, "Baltimore");
+    assert.equal(result.number, 3);
+});
+
+
+test("regression: SE46-4398/4399's surname-split order now agrees between location search and certificate lookup", () => {
+
+    // Before SPLIT_MONTHS was derived from the same validated data
+    // certificate lookup already used, these two paths disagreed
+    // about which of 4398/4399 was A-R vs S-Z.
+    const viaLocation = lookup({ location: "Prince George's", month: 6, year: 1986, recordType: "death" });
+    const viaCert = lookup({ certificateNumber: "1986-18100", recordType: "death" })[0];
+
+    const fromLocationSearch = viaLocation.find(r => r.number === 4398);
+    assert.equal(fromLocationSearch.label, "(S-Z) Nos. 18081-18137");
+    assert.equal(viaCert.number, 4398);
+});
