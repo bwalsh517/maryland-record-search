@@ -450,6 +450,10 @@ if (typeof require !== "undefined") {
             // label for the same records).
             let label = `Nos. ${record.certStart}-${record.certEnd}`;
 
+            if (record.split) {
+                label = `(${DATA.formatSplitLabel(record.split)}) ${label}`;
+            }
+
             if (record.location === "Worcester" && record.month === 12) {
                 label = `(${DATA.WORCESTER_LATE_FILES_LABEL}) ${label}`;
             }

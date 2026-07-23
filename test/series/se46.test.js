@@ -588,3 +588,16 @@ test("regression: SE46-4398/4399's surname-split order now agrees between locati
     assert.equal(fromLocationSearch.label, "(S-Z) Nos. 18081-18137");
     assert.equal(viaCert.number, 4398);
 });
+
+
+test("regression: certificate lookup includes the split label, matching the location/month search path", () => {
+
+    const split = lookup({ certificateNumber: "1973-300", recordType: "death" })[0];
+    assert.equal(split.label, "(A-O) Nos. 234-504");
+
+    const unsplit = lookup({ certificateNumber: "1985-1", recordType: "death" })[0];
+    assert.equal(unsplit.label, "Nos. 1-103");
+
+    const singleLetter = lookup({ certificateNumber: "1979-19040", recordType: "death" })[0];
+    assert.equal(singleLetter.label, "(A) Nos. 19036-19057");
+});

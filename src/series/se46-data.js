@@ -5378,7 +5378,8 @@ if (typeof require !== "undefined") {
         UNASSIGNED_RECORDS,
         RECORDS_1988_1989,
         YEAR_METADATA,
-        YEAR_1990_EXCEPTIONS
+        YEAR_1990_EXCEPTIONS,
+        formatSplitLabel
     };
 
     if (typeof module !== "undefined" && module.exports) {
