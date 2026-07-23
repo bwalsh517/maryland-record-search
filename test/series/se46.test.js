@@ -13,10 +13,11 @@ test("date search resolves an unsplit county to a single record (Allegany, first
 
 
 test("regression: label never repeats the location, which is already a separate field", () => {
-    // An unsplit record's label should be empty, not the location name
-    // again - the location field already carries that.
+    // An unsplit record's label should be its certificate range, not
+    // the location name again - the location field already carries that.
     const unsplit = lookup({ location: "Howard", month: 1, year: 1973, recordType: "death" })[0];
-    assert.equal(unsplit.label, "");
+    assert.equal(unsplit.label, "Nos. 2155-2163");
+    assert.ok(!unsplit.label.includes(unsplit.location));
 
     // A split record's label should be just the extra detail, not
     // "Baltimore City Baltimore City (A-G) ...".
@@ -158,8 +159,10 @@ test("Worcester's December 1984 record has a confirmed cert range, despite the c
 
 
 test("Worcester's late-files label does not apply outside December", () => {
+    const DATA = require("../../src/series/se46-data.js");
     const results = lookup({ location: "Worcester", month: 6, year: 1975, recordType: "death" });
-    assert.equal(results[0].label, "");
+    assert.equal(results[0].label, "Nos. 15795-15807");
+    assert.ok(!results[0].label.includes(DATA.WORCESTER_LATE_FILES_LABEL));
 });
 
 
@@ -386,15 +389,7 @@ test("listSeries() reports SE46 with both location and certificate-number search
     assert.equal(series.supportsLocationSearch, true);
     assert.equal(series.supportsCertificateNumberSearch, true);
 
-    // Certificate search covers a genuinely narrower range than the
-    // series itself (1988-2014 vs the full 1973-2014, since 1973-1987
-    // isn't covered by certificate lookup) - explicitly set, not
-    // defaulted, since this is the one series where the default
-    // (matching dateRange) wouldn't be accurate.
-    assert.deepEqual(series.certificateSearchRange, {
-        startYear: 1988, startMonth: 0, endYear: 2014, endMonth: 0
-    });
-    assert.notDeepEqual(series.certificateSearchRange, series.dateRange);
+    assert.deepEqual(series.certificateSearchRange, series.dateRange);
 });
 
 
@@ -411,4 +406,208 @@ test("listSeries()'s certificateSearchRange is null for series without certifica
 
     assert.equal(se42.supportsCertificateNumberSearch, false);
     assert.equal(se42.certificateSearchRange, null);
+});
+
+
+test("certificate lookup covers 1973-1979: resolves the exact record, location, and month", () => {
+
+    const result = lookup({ certificateNumber: "1973-1", recordType: "death" })[0];
+
+    assert.equal(result.number, 1);
+    assert.equal(result.location, "Allegany");
+    assert.equal(result.month, 1);
+    assert.equal(result.year, 1973);
+    assert.equal(result.label, "Nos. 1-96");
+});
+
+
+test("certificate lookup covers 1973-1979: rolls over correctly at a record boundary", () => {
+
+    // SE46-1 (Allegany, Jan 1973) is 1-96; SE46-2 (Anne Arundel) starts at 97.
+    const last = lookup({ certificateNumber: "1973-96", recordType: "death" })[0];
+    const first = lookup({ certificateNumber: "1973-97", recordType: "death" })[0];
+
+    assert.equal(last.number, 1);
+    assert.equal(first.number, 2);
+    assert.equal(first.location, "Anne Arundel");
+});
+
+
+test("certificate lookup covers 1973-1979: December Worcester also catches that year's late files", () => {
+
+    const result = lookup({ certificateNumber: "1973-32180", recordType: "death" })[0];
+
+    assert.equal(result.number, 325);
+    assert.equal(result.location, "Worcester");
+    assert.equal(result.month, 12);
+    assert.equal(result.label, "(also includes late files for the year) Nos. 32154-32185");
+});
+
+
+test("certificate lookup covers 1973-1979: a certificate past the year's real total returns nothing", () => {
+
+    const results = lookup({ certificateNumber: "1973-99999", recordType: "death" });
+
+    assert.deepEqual(results, []);
+});
+
+
+test("certificate lookup covers the whole 1973-1987 grid era, including years validated after phase 1", () => {
+
+    const result = lookup({ certificateNumber: "1985-1", recordType: "death" })[0];
+
+    assert.equal(result.number, 3902);
+    assert.equal(result.location, "Allegany");
+    assert.equal(result.month, 1);
+});
+
+
+test("certificate lookup covers 1973-1979: existing 1988+ behavior is unaffected (no location/month)", () => {
+
+    const result = lookup({ certificateNumber: "1995-1234", recordType: "death" })[0];
+
+    assert.equal(result.location, null);
+    assert.equal(result.month, null);
+});
+
+
+test("regression: July 1973 Montgomery split range no longer overlaps Prince George's (found during full-decade validation)", () => {
+
+    const monthResults = lookup({ location: "Montgomery", month: 7, year: 1973, recordType: "death" });
+
+    assert.equal(monthResults.length, 2);
+    assert.equal(monthResults[0].label, "(A-R) Nos. 17866-18080");
+    assert.equal(monthResults[1].label, "(S-Z) Nos. 18081-18145");
+});
+
+
+test("regression: the September 1978 Caroline split-range chain resolves correctly through Harford, where it realigns", () => {
+
+    // A split at SE46-1839 (Caroline) displaced every certificate range
+    // from SE46-1840 through SE46-1872 by one row; SE46-1873 (Garrett)
+    // covers a range that was never in the source table at all.
+    // Confirmed record by record; spot-checking the ends of that chain.
+    const caroline = lookup({ series: "SE46-1839" })[0];
+    const garrett = lookup({ series: "SE46-1873" })[0];
+    const harford = lookup({ certificateNumber: "1978-25892", recordType: "death" })[0];
+
+    assert.equal(caroline.number, 1839);
+    assert.equal(garrett.number, 1873);
+    assert.equal(harford.number, 1874);
+    assert.equal(harford.location, "Harford");
+});
+
+
+test("regression: SE46-160's range was corrected but never actually written until a later pass caught it", () => {
+
+    const result = lookup({ certificateNumber: "1973-15920", recordType: "death" })[0];
+
+    assert.equal(result.number, 160);
+    assert.equal(result.location, "Wicomico");
+});
+
+
+test("sourceStatus marks every 1973-1987 record individually checked against the scan", () => {
+
+    const DATA = require("../../src/series/se46-data.js");
+
+    const corrected = DATA.CERT_RANGES_1973_1987.filter(r => r.sourceStatus === "corrected");
+    const verified = DATA.CERT_RANGES_1973_1987.filter(r => r.sourceStatus === "verified");
+    const assumed = DATA.CERT_RANGES_1973_1987.filter(r => r.sourceStatus === "assumed");
+    const unmarked = DATA.CERT_RANGES_1973_1987.filter(r => !r.sourceStatus);
+
+    assert.equal(corrected.length, 256);
+    assert.equal(verified.length, 43);
+    assert.equal(assumed.length, 2);
+    assert.equal(unmarked.length, DATA.CERT_RANGES_1973_1987.length - 301);
+
+    // A record never individually checked at all is unmarked, not "verified" -
+    // it simply was never singled out during validation.
+    const neverChecked = DATA.CERT_RANGES_1973_1987.find(r => r.number === 1);
+    assert.equal(neverChecked.sourceStatus, undefined);
+
+    // A record that matched the source exactly when checked.
+    const matchedOnCheck = DATA.CERT_RANGES_1973_1987.find(r => r.number === 1874);
+    assert.equal(matchedOnCheck.sourceStatus, "verified");
+
+    // A pulled-out record (SE46-4910-4916), never before recorded anywhere.
+    const pulledOut = DATA.CERT_RANGES_1973_1987.find(r => r.number === 4916);
+    assert.equal(pulledOut.pulledOut, true);
+    assert.equal(pulledOut.sourceStatus, "verified");
+    assert.equal(pulledOut.certStart, 10475);
+    assert.equal(pulledOut.certEnd, 10523);
+
+    // The one confirmed "assumed" case - a verified cert/surname pairing
+    // whose archive.org-assigned number can't be independently checked.
+    const assumedRecord = DATA.CERT_RANGES_1973_1987.find(r => r.number === 4398);
+    assert.equal(assumedRecord.sourceStatus, "assumed");
+
+    // KNOWN_CERT_RANGES (December Worcester) uses the same field.
+    assert.equal(DATA.KNOWN_CERT_RANGES[325].sourceStatus, "corrected");
+    assert.equal(DATA.KNOWN_CERT_RANGES[1942].sourceStatus, "corrected");
+});
+
+
+test("regression: SPLIT_MONTHS is derived from CERT_RANGES_1973_1987, not authored separately", () => {
+
+    const DATA = require("../../src/series/se46-data.js");
+
+    assert.equal(Object.keys(DATA.SPLIT_MONTHS).length, 180);
+
+    const jan1973Baltimore = DATA.SPLIT_MONTHS["01/1973"]["Baltimore"];
+    assert.deepEqual(jan1973Baltimore, [
+        { label: "A-O", certStart: 234, certEnd: 504 },
+        { label: "P-Z", certStart: 505, certEnd: 649 }
+    ]);
+});
+
+
+test("regression: certificate lookup returns a clean location for split records, not the raw '(A-O)' string", () => {
+
+    const result = lookup({ certificateNumber: "1973-300", recordType: "death" })[0];
+
+    assert.equal(result.location, "Baltimore");
+    assert.equal(result.number, 3);
+});
+
+
+test("regression: SE46-4398/4399's surname-split order now agrees between location search and certificate lookup", () => {
+
+    // Before SPLIT_MONTHS was derived from the same validated data
+    // certificate lookup already used, these two paths disagreed
+    // about which of 4398/4399 was A-R vs S-Z.
+    const viaLocation = lookup({ location: "Prince George's", month: 6, year: 1986, recordType: "death" });
+    const viaCert = lookup({ certificateNumber: "1986-18100", recordType: "death" })[0];
+
+    const fromLocationSearch = viaLocation.find(r => r.number === 4398);
+    assert.equal(fromLocationSearch.label, "(S-Z) Nos. 18081-18137");
+    assert.equal(viaCert.number, 4398);
+});
+
+
+test("regression: certificate lookup includes the split label, matching the location/month search path", () => {
+
+    const split = lookup({ certificateNumber: "1973-300", recordType: "death" })[0];
+    assert.equal(split.label, "(A-O) Nos. 234-504");
+
+    const unsplit = lookup({ certificateNumber: "1985-1", recordType: "death" })[0];
+    assert.equal(unsplit.label, "Nos. 1-103");
+
+    const singleLetter = lookup({ certificateNumber: "1979-19040", recordType: "death" })[0];
+    assert.equal(singleLetter.label, "(A) Nos. 19036-19057");
+});
+
+
+test("regression: location/month search shows the certificate range for unsplit records too, not just split ones", () => {
+
+    // Before this fix, only split records (via SPLIT_MONTHS) and
+    // December Worcester (via KNOWN_CERT_RANGES) got a "Nos. X-Y"
+    // label from location/month search - every other unsplit record
+    // silently got an empty label, even though its cert range was
+    // fully available in CERT_RANGES_1973_1987 the whole time.
+    const unsplit = lookup({ location: "Baltimore", month: 4, year: 1973, recordType: "death" })[0];
+    assert.equal(unsplit.label, "Nos. 8321-8663");
+
+    const alsoUnsplit = lookup({ location: "Allegany", month: 1, year: 1973, recordType: "death" })[0];
+    assert.equal(alsoUnsplit.label, "Nos. 1-96");
 });

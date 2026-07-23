@@ -47,6 +47,24 @@ if (typeof require !== "undefined") {
         return number >= 7032 && number <= 7215;
     }
 
+    // Every record's certStart/certEnd is available directly on
+    // CERT_RANGES_1973_1987 now, split or not - a plain lookup here
+    // instead of hardcoding null and relying on a separate fallback,
+    // which previously only covered December Worcester and silently
+    // left every other unsplit record's label without a certificate
+    // range at all.
+    function buildUnsplitPart(number) {
+
+        const record = DATA.CERT_RANGES_1973_1987.find(r => r.number === number);
+
+        return {
+            number,
+            label: null,
+            certStart: record ? record.certStart : null,
+            certEnd: record ? record.certEnd : null
+        };
+    }
+
     // Every record for a given year, 1988-2014 - no location or month
     // dimension exists in this era at all, so this is the complete
     // list regardless of what was searched for (see
@@ -120,11 +138,10 @@ if (typeof require !== "undefined") {
             // of 7031 - see lookupSeries() below.
             this.seriesIdRange = { start: 1, end: 7215 };
 
-            // Certificate search covers 1988-2014, not the whole
-            // series - see lookupCertificateNumber() below (no
-            // location dimension exists after 1987 at all, and
-            // 1973-1987 isn't covered by certificate lookup yet).
-            this.certificateSearchRange = { startYear: 1988, startMonth: 0, endYear: 2014, endMonth: 0 };
+            // certificateSearchRange isn't set explicitly here - it
+            // matches dateRange, so it falls back to dateRange per
+            // lookup.js's existing convention. See CERT_RANGES_1973_1987
+            // in se46-data.js.
 
             // No leading pages before the first certificate in this
             // series' scans (unlike CM1132/CM1135) - stated explicitly
@@ -261,7 +278,7 @@ if (typeof require !== "undefined") {
                     if (mv === value && jurisdiction === location && count > 0) {
                         targetParts = parts
                             ? parts.map((p, i) => ({ number: assignedNumbers[i], label: p.label, certStart: p.certStart, certEnd: p.certEnd }))
-                            : [{ number: assignedNumbers[0], label: null, certStart: null, certEnd: null }];
+                            : [buildUnsplitPart(assignedNumbers[0])];
                     }
                 }
             }
@@ -280,12 +297,8 @@ if (typeof require !== "undefined") {
                         label = `(${DATA.WORCESTER_LATE_FILES_LABEL})`;
                     }
 
-                    const certRange = part.certStart
-                        ? part
-                        : DATA.KNOWN_CERT_RANGES[part.number];
-
-                    if (certRange) {
-                        label += `${label ? " " : ""}Nos. ${certRange.certStart}-${certRange.certEnd}`;
+                    if (part.certStart) {
+                        label += `${label ? " " : ""}Nos. ${part.certStart}-${part.certEnd}`;
                     }
 
                     return this.createResult({
@@ -362,6 +375,16 @@ if (typeof require !== "undefined") {
                 record = DATA.RECORDS_1988_1989.find(r =>
                     r.year === year && cert >= r.certStart && cert <= r.certEnd
                 );
+            } else if (year >= 1973 && year <= 1987) {
+
+                // December Worcester's expanded range (it also catches
+                // that year's late files) is already stored directly
+                // on its own record here - no special-casing needed,
+                // unlike when this only covered 1973-1979 and read
+                // December Worcester from a separate table.
+                record = DATA.CERT_RANGES_1973_1987.find(r =>
+                    r.year === year && cert >= r.certStart && cert <= r.certEnd
+                );
             } else if (DATA.YEAR_METADATA[year]) {
 
                 const { firstNumber, lastNumber, totalCerts } = DATA.YEAR_METADATA[year];
@@ -429,11 +452,29 @@ if (typeof require !== "undefined") {
             const rawPosition = cert - record.certStart;
             const page = this.pageForPosition(rawPosition * (backsScanned ? 2 : 1));
 
+            // Confirmed for every December (1973-1987), not just the
+            // last one - Worcester's December record each year also
+            // catches that year's late-filed certificates, tacked
+            // onto the end of its own range rather than counted
+            // separately (matches the location/month search path's
+            // label for the same records).
+            let label = `Nos. ${record.certStart}-${record.certEnd}`;
+
+            if (record.split) {
+                label = `(${DATA.formatSplitLabel(record.split)}) ${label}`;
+            }
+
+            if (record.location === "Worcester" && record.month === 12) {
+                label = `(${DATA.WORCESTER_LATE_FILES_LABEL}) ${label}`;
+            }
+
             return [
                 this.createResult({
                     year,
                     number: record.number,
-                    label: `Nos. ${record.certStart}-${record.certEnd}`,
+                    location: record.location || null,
+                    month: record.month || null,
+                    label,
                     certificateNumber: `${year}-${cert}`,
                     url,
                     approximatePageUrl: `${url}page/n${page}/mode/1up`
