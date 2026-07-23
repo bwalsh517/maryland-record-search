@@ -1,6 +1,6 @@
 {
   "name": "maryland-record-search",
-  "version": "1.3.1",
+  "version": "1.4.0",
   "description": "Lookup engine for locating Maryland vital record certificate scans (birth and death) on archive.org and the MSA guide, by county/date, series ID, or certificate number.",
   "main": "src/index.js",
   "type": "commonjs",
