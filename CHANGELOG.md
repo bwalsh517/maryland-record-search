@@ -1,5 +1,25 @@
 # Changelog
 
+## 1.4.0
+
+### Added
+
+- SE46 certificate-number lookup now covers 1973-1987, in addition to
+  the existing 1988-2014 coverage - the full series, no gap.
+  `certificateSearchRange` reflects this and is no longer set
+  explicitly, since it now matches the series' own `dateRange`.
+- `sourceStatus` (`verified` / `corrected` / `assumed`) marks every
+  SE46 1973-1987 record that needed individual confirmation against
+  the source, rather than being carried forward as-is.
+
+### Fixed
+
+- SE46 location/month search silently omitted the certificate-range
+  label for unsplit records - only split records and December
+  Worcester ever showed one. Every unsplit record now shows it too.
+- About 300 SE46 1973-1987 certificate ranges corrected after being
+  checked for continuity against the surrounding records.
+
 ## 1.3.1
 
 ### Fixed
