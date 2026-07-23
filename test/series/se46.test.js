@@ -445,7 +445,7 @@ test("certificate lookup covers 1973-1979: December Worcester also catches that 
     assert.equal(result.number, 325);
     assert.equal(result.location, "Worcester");
     assert.equal(result.month, 12);
-    assert.equal(result.label, "Nos. 32154-32185");
+    assert.equal(result.label, "(also includes late files for the year) Nos. 32154-32185");
 });
 
 

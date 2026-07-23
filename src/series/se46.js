@@ -442,13 +442,25 @@ if (typeof require !== "undefined") {
             const rawPosition = cert - record.certStart;
             const page = this.pageForPosition(rawPosition * (backsScanned ? 2 : 1));
 
+            // Confirmed for every December (1973-1987), not just the
+            // last one - Worcester's December record each year also
+            // catches that year's late-filed certificates, tacked
+            // onto the end of its own range rather than counted
+            // separately (matches the location/month search path's
+            // label for the same records).
+            let label = `Nos. ${record.certStart}-${record.certEnd}`;
+
+            if (record.location === "Worcester" && record.month === 12) {
+                label = `(${DATA.WORCESTER_LATE_FILES_LABEL}) ${label}`;
+            }
+
             return [
                 this.createResult({
                     year,
                     number: record.number,
                     location: record.location || null,
                     month: record.month || null,
-                    label: `Nos. ${record.certStart}-${record.certEnd}`,
+                    label,
                     certificateNumber: `${year}-${cert}`,
                     url,
                     approximatePageUrl: `${url}page/n${page}/mode/1up`
