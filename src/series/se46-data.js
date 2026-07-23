@@ -114,6 +114,14 @@ if (typeof require !== "undefined") {
     const CERT_RANGES_1973_1987 = [
         { number: 1, month: 1, year: 1973, location: "Allegany", certStart: 1, certEnd: 96 },
         { number: 2, month: 1, year: 1973, location: "Anne Arundel", certStart: 97, certEnd: 233 },
+        // Right where certificate 248 should appear, the scan has an
+        // inserted photographer-info page that isn't a certificate at
+        // all. For certificate 248 and every one after it, take the
+        // normal calculated page value for this series and add 2.
+        // Different shape from the out-of-order-page records elsewhere
+        // in this file (nothing here is scanned out of order, there's
+        // just an extra page inserted partway through the item). Not
+        // accounted for in page-jump math yet.
         { number: 3, month: 1, year: 1973, location: "Baltimore", split: [{ start: "A", end: "O" }], certStart: 234, certEnd: 504 },
         { number: 4, month: 1, year: 1973, location: "Baltimore", split: [{ start: "P", end: "Z" }], certStart: 505, certEnd: 649 },
         { number: 5, month: 1, year: 1973, location: "Baltimore City", split: [{ start: "A", end: "E" }], certStart: 650, certEnd: 954 },
