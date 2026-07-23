@@ -199,3 +199,60 @@ test("lookup() with certificateNumber + a separate year field returns an empty a
         []
     );
 });
+
+
+test("lookup() with month + year and no location returns every jurisdiction's records for that period", () => {
+    const results = lookup({ month: 10, year: 1977, recordType: "death" });
+
+    assert.ok(results.length > 20);
+    assert.ok(results.every(r => r.series === "SE46"));
+    assert.ok(results.every(r => r.month === 10 && r.year === 1977));
+});
+
+
+test("lookup() with month + year and no location is sorted by record number, not alphabetically", () => {
+    const results = lookup({ month: 10, year: 1977, recordType: "death" });
+
+    const numbers = results.map(r => r.number);
+    const sorted = [...numbers].sort((a, b) => a - b);
+    assert.deepEqual(numbers, sorted);
+});
+
+
+test("lookup() with year only (no month, no location) returns every month's records for the year", () => {
+    const results = lookup({ year: 1973, recordType: "death" });
+
+    assert.equal(results.length, 324);
+    assert.ok(results.every(r => r.year === 1973));
+
+    const months = new Set(results.map(r => r.month));
+    assert.equal(months.size, 12);
+});
+
+
+test("lookup() with month + year and no location returns nothing for a series/period with no all-locations support", () => {
+    // CM1132 doesn't implement lookupAllForMonth - it shouldn't
+    // contribute anything to a no-location search, the same way an
+    // unimplemented location search contributes nothing.
+    const results = lookup({ month: 1, year: 1900, recordType: "death" });
+
+    assert.deepEqual(results, []);
+});
+
+
+test("lookup() with month + year and no location respects recordType", () => {
+    const deathResults = lookup({ month: 10, year: 1977, recordType: "death" });
+    const birthResults = lookup({ month: 10, year: 1977, recordType: "birth" });
+
+    assert.ok(deathResults.length > 0);
+    assert.deepEqual(birthResults, []);
+});
+
+
+test("listSeries() reports supportsAllLocationsSearch accurately", () => {
+    const se46 = listSeries().find(s => s.name === "SE46");
+    const cm1132 = listSeries().find(s => s.name === "CM1132");
+
+    assert.equal(se46.supportsAllLocationsSearch, true);
+    assert.equal(cm1132.supportsAllLocationsSearch, false);
+});
