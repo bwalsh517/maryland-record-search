@@ -120,14 +120,13 @@ if (typeof require !== "undefined") {
             // of 7031 - see lookupSeries() below.
             this.seriesIdRange = { start: 1, end: 7215 };
 
-            // Certificate search covers 1988-2014, plus 1973-1979 now
-            // that a full decade of ranges has been validated - see
-            // lookupCertificateNumber() below. This field can't
-            // represent that as a single range without also claiming
-            // 1980-1987 (not yet validated) - left at its old,
-            // conservative value pending a decision on how to
-            // represent disjoint coverage. See CERT_RANGES_1973_1979
-            // in se46-data.js and TODO.md.
+            // Certificate search now covers the whole 1973-1987 grid
+            // era, plus 1988-2014 - see lookupCertificateNumber()
+            // below. That's every year with no gap left, so this field
+            // could now honestly become one continuous range
+            // (1973-2014) - left at its old value for now since
+            // updating it wasn't part of what this data patch was
+            // asked to do. See CERT_RANGES_1973_1987 in se46-data.js.
             this.certificateSearchRange = { startYear: 1988, startMonth: 0, endYear: 2014, endMonth: 0 };
 
             // No leading pages before the first certificate in this
@@ -366,28 +365,16 @@ if (typeof require !== "undefined") {
                 record = DATA.RECORDS_1988_1989.find(r =>
                     r.year === year && cert >= r.certStart && cert <= r.certEnd
                 );
-            } else if (year >= 1973 && year <= 1979) {
+            } else if (year >= 1973 && year <= 1987) {
 
-                // December Worcester also catches that year's late
-                // files, so it's checked separately via the same
-                // KNOWN_CERT_RANGES table lookupSeries() already uses,
-                // rather than duplicating its range here.
-                const decemberWorcester = this.lookupLocationMonthYear("Worcester", 12, year)[0];
-                const decemberRange = decemberWorcester && DATA.KNOWN_CERT_RANGES[decemberWorcester.number];
-
-                if (decemberRange && cert >= decemberRange.certStart && cert <= decemberRange.certEnd) {
-                    record = {
-                        number: decemberWorcester.number,
-                        certStart: decemberRange.certStart,
-                        certEnd: decemberRange.certEnd,
-                        location: "Worcester",
-                        month: 12
-                    };
-                } else {
-                    record = DATA.CERT_RANGES_1973_1979.find(r =>
-                        r.year === year && cert >= r.certStart && cert <= r.certEnd
-                    );
-                }
+                // December Worcester's expanded range (it also catches
+                // that year's late files) is already stored directly
+                // on its own record here - no special-casing needed,
+                // unlike when this only covered 1973-1979 and read
+                // December Worcester from a separate table.
+                record = DATA.CERT_RANGES_1973_1987.find(r =>
+                    r.year === year && cert >= r.certStart && cert <= r.certEnd
+                );
             } else if (DATA.YEAR_METADATA[year]) {
 
                 const { firstNumber, lastNumber, totalCerts } = DATA.YEAR_METADATA[year];

@@ -457,11 +457,13 @@ test("certificate lookup covers 1973-1979: a certificate past the year's real to
 });
 
 
-test("certificate lookup does not yet cover 1980-1987 - still returns nothing, not a wrong guess", () => {
+test("certificate lookup covers the whole 1973-1987 grid era, including years validated after phase 1", () => {
 
-    const results = lookup({ certificateNumber: "1980-100", recordType: "death" });
+    const result = lookup({ certificateNumber: "1985-1", recordType: "death" })[0];
 
-    assert.deepEqual(results, []);
+    assert.equal(result.number, 3902);
+    assert.equal(result.location, "Allegany");
+    assert.equal(result.month, 1);
 });
 
 
@@ -510,30 +512,40 @@ test("regression: SE46-160's range was corrected but never actually written unti
 });
 
 
-test("sourceStatus marks every 1973-1979 record individually checked against the scan, distinguishing verified matches from corrections", () => {
+test("sourceStatus marks every 1973-1987 record individually checked against the scan", () => {
 
     const DATA = require("../../src/series/se46-data.js");
 
-    const corrected = DATA.CERT_RANGES_1973_1979.filter(r => r.sourceStatus === "corrected");
-    const verified = DATA.CERT_RANGES_1973_1979.filter(r => r.sourceStatus === "verified");
-    const unmarked = DATA.CERT_RANGES_1973_1979.filter(r => !r.sourceStatus);
+    const corrected = DATA.CERT_RANGES_1973_1987.filter(r => r.sourceStatus === "corrected");
+    const verified = DATA.CERT_RANGES_1973_1987.filter(r => r.sourceStatus === "verified");
+    const assumed = DATA.CERT_RANGES_1973_1987.filter(r => r.sourceStatus === "assumed");
+    const unmarked = DATA.CERT_RANGES_1973_1987.filter(r => !r.sourceStatus);
 
-    assert.equal(corrected.length, 87);
-    assert.equal(verified.length, 29);
-    assert.equal(unmarked.length, DATA.CERT_RANGES_1973_1979.length - 116);
+    assert.equal(corrected.length, 256);
+    assert.equal(verified.length, 43);
+    assert.equal(assumed.length, 2);
+    assert.equal(unmarked.length, DATA.CERT_RANGES_1973_1987.length - 301);
 
-    // A record confirmed unchanged from the source is unmarked, not "verified" -
-    // it was never individually checked, just never needed to be.
-    const neverChecked = DATA.CERT_RANGES_1973_1979.find(r => r.number === 15);
+    // A record never individually checked at all is unmarked, not "verified" -
+    // it simply was never singled out during validation.
+    const neverChecked = DATA.CERT_RANGES_1973_1987.find(r => r.number === 1);
     assert.equal(neverChecked.sourceStatus, undefined);
 
     // A record that matched the source exactly when checked.
-    const matchedOnCheck = DATA.CERT_RANGES_1973_1979.find(r => r.number === 1874);
+    const matchedOnCheck = DATA.CERT_RANGES_1973_1987.find(r => r.number === 1874);
     assert.equal(matchedOnCheck.sourceStatus, "verified");
 
-    // A record whose range genuinely differs from the MSA guide.
-    const differs = DATA.CERT_RANGES_1973_1979.find(r => r.number === 1839);
-    assert.equal(differs.sourceStatus, "corrected");
+    // A pulled-out record (SE46-4910-4916), never before recorded anywhere.
+    const pulledOut = DATA.CERT_RANGES_1973_1987.find(r => r.number === 4916);
+    assert.equal(pulledOut.pulledOut, true);
+    assert.equal(pulledOut.sourceStatus, "verified");
+    assert.equal(pulledOut.certStart, 10475);
+    assert.equal(pulledOut.certEnd, 10523);
+
+    // The one confirmed "assumed" case - a verified cert/surname pairing
+    // whose archive.org-assigned number can't be independently checked.
+    const assumedRecord = DATA.CERT_RANGES_1973_1987.find(r => r.number === 4398);
+    assert.equal(assumedRecord.sourceStatus, "assumed");
 
     // KNOWN_CERT_RANGES (December Worcester) uses the same field.
     assert.equal(DATA.KNOWN_CERT_RANGES[325].sourceStatus, "corrected");
