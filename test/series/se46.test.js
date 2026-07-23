@@ -13,10 +13,11 @@ test("date search resolves an unsplit county to a single record (Allegany, first
 
 
 test("regression: label never repeats the location, which is already a separate field", () => {
-    // An unsplit record's label should be empty, not the location name
-    // again - the location field already carries that.
+    // An unsplit record's label should be its certificate range, not
+    // the location name again - the location field already carries that.
     const unsplit = lookup({ location: "Howard", month: 1, year: 1973, recordType: "death" })[0];
-    assert.equal(unsplit.label, "");
+    assert.equal(unsplit.label, "Nos. 2155-2163");
+    assert.ok(!unsplit.label.includes(unsplit.location));
 
     // A split record's label should be just the extra detail, not
     // "Baltimore City Baltimore City (A-G) ...".
@@ -158,8 +159,10 @@ test("Worcester's December 1984 record has a confirmed cert range, despite the c
 
 
 test("Worcester's late-files label does not apply outside December", () => {
+    const DATA = require("../../src/series/se46-data.js");
     const results = lookup({ location: "Worcester", month: 6, year: 1975, recordType: "death" });
-    assert.equal(results[0].label, "");
+    assert.equal(results[0].label, "Nos. 15795-15807");
+    assert.ok(!results[0].label.includes(DATA.WORCESTER_LATE_FILES_LABEL));
 });
 
 
@@ -592,4 +595,19 @@ test("regression: certificate lookup includes the split label, matching the loca
 
     const singleLetter = lookup({ certificateNumber: "1979-19040", recordType: "death" })[0];
     assert.equal(singleLetter.label, "(A) Nos. 19036-19057");
+});
+
+
+test("regression: location/month search shows the certificate range for unsplit records too, not just split ones", () => {
+
+    // Before this fix, only split records (via SPLIT_MONTHS) and
+    // December Worcester (via KNOWN_CERT_RANGES) got a "Nos. X-Y"
+    // label from location/month search - every other unsplit record
+    // silently got an empty label, even though its cert range was
+    // fully available in CERT_RANGES_1973_1987 the whole time.
+    const unsplit = lookup({ location: "Baltimore", month: 4, year: 1973, recordType: "death" })[0];
+    assert.equal(unsplit.label, "Nos. 8321-8663");
+
+    const alsoUnsplit = lookup({ location: "Allegany", month: 1, year: 1973, recordType: "death" })[0];
+    assert.equal(alsoUnsplit.label, "Nos. 1-96");
 });

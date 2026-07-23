@@ -47,6 +47,24 @@ if (typeof require !== "undefined") {
         return number >= 7032 && number <= 7215;
     }
 
+    // Every record's certStart/certEnd is available directly on
+    // CERT_RANGES_1973_1987 now, split or not - a plain lookup here
+    // instead of hardcoding null and relying on a separate fallback,
+    // which previously only covered December Worcester and silently
+    // left every other unsplit record's label without a certificate
+    // range at all.
+    function buildUnsplitPart(number) {
+
+        const record = DATA.CERT_RANGES_1973_1987.find(r => r.number === number);
+
+        return {
+            number,
+            label: null,
+            certStart: record ? record.certStart : null,
+            certEnd: record ? record.certEnd : null
+        };
+    }
+
     // Every record for a given year, 1988-2014 - no location or month
     // dimension exists in this era at all, so this is the complete
     // list regardless of what was searched for (see
@@ -260,7 +278,7 @@ if (typeof require !== "undefined") {
                     if (mv === value && jurisdiction === location && count > 0) {
                         targetParts = parts
                             ? parts.map((p, i) => ({ number: assignedNumbers[i], label: p.label, certStart: p.certStart, certEnd: p.certEnd }))
-                            : [{ number: assignedNumbers[0], label: null, certStart: null, certEnd: null }];
+                            : [buildUnsplitPart(assignedNumbers[0])];
                     }
                 }
             }
@@ -279,12 +297,8 @@ if (typeof require !== "undefined") {
                         label = `(${DATA.WORCESTER_LATE_FILES_LABEL})`;
                     }
 
-                    const certRange = part.certStart
-                        ? part
-                        : DATA.KNOWN_CERT_RANGES[part.number];
-
-                    if (certRange) {
-                        label += `${label ? " " : ""}Nos. ${certRange.certStart}-${certRange.certEnd}`;
+                    if (part.certStart) {
+                        label += `${label ? " " : ""}Nos. ${part.certStart}-${part.certEnd}`;
                     }
 
                     return this.createResult({
