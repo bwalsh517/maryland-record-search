@@ -17,14 +17,14 @@ if (typeof require !== "undefined") {
 
             this.seriesIdRange = { start: 1, end: 269 };
 
-            // Full mapping transcribed from the MSA finding aid for this
+            // Full mapping transcribed from the MSA guide for this
             // series (SM35-1 through SM35-269, the entire series).
             // `sr` is the internal record number - it's used to build
             // the archive.org URL for numbers 1-72 (see archiveUrl()),
             // but numbers 73-269 use the MSA guide URL pattern instead
             // (per explicit confirmation), so their `sr` value here is
             // informational/for reference only, not used in URL
-            // construction. `description` is the finding aid's own note
+            // construction. `description` is the MSA guide's own note
             // on what month/county ranges are actually in that file
             // (kept verbatim, not parsed - see lookupLocationMonthYear()
             // for why).
@@ -314,6 +314,12 @@ if (typeof require !== "undefined") {
             // 73-269 have no archive.org scan at all; BaseSeries.
             // archiveUrl()'s default MSA fallback handles them.
             this.ARCHIVE_SR_RANGE = { start: 1, end: 72 };
+
+            // Archive.org blocks: "SM35 1-35" and "SM35 36-72".
+            this.ARCHIVE_BLOCKS = [
+                { start: 1, end: 35, collection: 1 },
+                { start: 36, end: 72, collection: 36 }
+            ];
         }
 
 
@@ -355,12 +361,11 @@ if (typeof require !== "undefined") {
          * Deliberately basic: each file's actual coverage is a specific
          * (sometimes multi-month, sometimes multi-county-range,
          * occasionally cross-year) span described in free text in the
-         * finding aid ("Jan. AL-QA, WA-WO, QA-WA, Feb. AL-BA") rather
+         * MSA guide ("Jan. AL-QA, WA-WO, QA-WA, Feb. AL-BA") rather
          * than a clean per-county-per-month grid like the other series.
          * Parsing that reliably - including handling "SM" meaning Saint
-         * Mary's County here but the series name elsewhere, and "SO"
-         * meaning a different archival series reference, not Somerset -
-         * is real work that hasn't been done yet.
+         * Mary's County here but the series name elsewhere - is real
+         * work that hasn't been done yet.
          *
          * So for now this ignores the location and month arguments
          * entirely (beyond canHandle() already excluding Baltimore
@@ -399,9 +404,13 @@ if (typeof require !== "undefined") {
             const record = this.recordsByNumber[number];
 
             if (record && number >= start && number <= end) {
+
+                const block = this.ARCHIVE_BLOCKS.find(b => number >= b.start && number <= b.end);
+                const collection = block ? block.collection : number;
+
                 return (
                     "https://archive.org/details/" +
-                    `reclaim-the-records-maryland-birth-certificates-1914-1922-sm-35-${number}` +
+                    `reclaim-the-records-maryland-birth-certificates-1914-1922-sm-35-${collection}` +
                     "/" +
                     `Reclaim_The_Records_-_Maryland_Birth_Certificates_-_1914-1922_-_SM35-sr${record.sr}` +
                     "/"
