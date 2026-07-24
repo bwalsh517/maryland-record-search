@@ -611,3 +611,37 @@ test("regression: location/month search shows the certificate range for unsplit 
     const alsoUnsplit = lookup({ location: "Allegany", month: 1, year: 1973, recordType: "death" })[0];
     assert.equal(alsoUnsplit.label, "Nos. 1-96");
 });
+
+
+test("lookupAllForMonth: a pulled-out record appears at its real number, not interleaved alphabetically", () => {
+
+    const results = lookup({ month: 1, year: 1980, recordType: "death" });
+
+    const harford = results.find(r => r.location === "Harford");
+    assert.equal(harford.number, 4914);
+    assert.equal(harford.label, "Nos. 1803-1854");
+
+    // It should be the last result, since 4914 is far higher than
+    // every other January 1980 number.
+    assert.equal(results[results.length - 1].number, 4914);
+});
+
+
+test("lookupAllForMonth: split and December-Worcester labels match the location/month search path exactly", () => {
+
+    const results = lookup({ month: 1, year: 1973, recordType: "death" });
+
+    const baltimoreAO = results.find(r => r.location === "Baltimore" && r.number === 3);
+    assert.equal(baltimoreAO.label, "(A-O) Nos. 234-504");
+
+    const decResults = lookup({ month: 12, year: 1973, recordType: "death" });
+    const worcester = decResults.find(r => r.location === "Worcester");
+    assert.equal(worcester.label, "(also includes late files for the year) Nos. 32154-32185");
+});
+
+
+test("lookupAllForMonth: returns nothing outside the 1973-1987 grid era", () => {
+
+    assert.deepEqual(lookup({ month: 1, year: 1988, recordType: "death" }).filter(r => r.series === "SE46"), []);
+    assert.deepEqual(lookup({ month: 12, year: 1972, recordType: "death" }).filter(r => r.series === "SE46"), []);
+});

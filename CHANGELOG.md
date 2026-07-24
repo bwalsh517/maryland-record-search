@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.4.1
+
+### Added
+
+- `lookup({ month, year, recordType })` with `location` omitted now
+  returns every SE46 record for that period, across every
+  jurisdiction, sorted by record number - matches the MSA guide's own
+  default view. `lookup({ year, recordType })` with both `location`
+  and `month` omitted returns the whole year, month by month.
+  `listSeries()` reports this per series as
+  `supportsAllLocationsSearch`.
+
 ## 1.4.0
 
 ### Added

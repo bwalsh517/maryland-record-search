@@ -47,6 +47,30 @@ if (typeof require !== "undefined") {
         return number >= 7032 && number <= 7215;
     }
 
+    // Shared by certificate lookup and lookupAllForMonth() below - the
+    // same split/late-files annotations should look identical no
+    // matter which path a record was found through.
+    function buildRecordLabel(record) {
+
+        // Confirmed for every December (1973-1987), not just the last
+        // one - Worcester's December record each year also catches
+        // that year's late-filed certificates, tacked onto the end of
+        // its own range rather than counted separately.
+        let label = `Nos. ${record.certStart}-${record.certEnd}`;
+
+        if (record.split) {
+            label = `(${DATA.formatSplitLabel(record.split)}) ${label}`;
+        }
+
+        if (record.location === "Worcester" && record.month === 12) {
+            label = `(${DATA.WORCESTER_LATE_FILES_LABEL}) ${label}`;
+        }
+
+        return label;
+    }
+
+
+
     // Every record's certStart/certEnd is available directly on
     // CERT_RANGES_1973_1987 now, split or not - a plain lookup here
     // instead of hardcoding null and relying on a separate fallback,
@@ -357,6 +381,46 @@ if (typeof require !== "undefined") {
          * an embedded "YYYY-" prefix or a separate year field) before
          * calling this.
          */
+        /**
+         * Every record for a given month/year, across every
+         * jurisdiction - for browsing a whole month at once, or
+         * comparing against the MSA guide directly, rather than
+         * checking one county at a time. Only 1973-1987 (the grid
+         * era) is covered - 1988-2014 has no location dimension in
+         * the source at all, so there's no per-jurisdiction list to
+         * return there.
+         *
+         * Sorted by record number ascending, matching the MSA guide's
+         * own default view - not alphabetical by county. This also
+         * means a pulled-out record (SE46-4910-4916) shows up at its
+         * real, far-off number rather than interleaved where its
+         * county would otherwise fall alphabetically - that's a
+         * faithful reflection of where the record actually lives on
+         * MSA/archive.org, not a bug in this ordering.
+         */
+        lookupAllForMonth(month, year) {
+
+            const value = monthValue(year, month);
+
+            if (value < GRID_DATA_START || value > GRID_DATA_END) {
+                return [];
+            }
+
+            const records = DATA.CERT_RANGES_1973_1987
+                .filter(r => r.month === month && r.year === year)
+                .sort((a, b) => a.number - b.number);
+
+            return records.map(record => this.createResult({
+                year,
+                month,
+                location: record.location,
+                number: record.number,
+                label: buildRecordLabel(record),
+                url: this.archiveUrl(record.number)
+            }));
+        }
+
+
         lookupCertificateNumber(rest, year = null) {
 
             if (year === null) {
@@ -452,21 +516,7 @@ if (typeof require !== "undefined") {
             const rawPosition = cert - record.certStart;
             const page = this.pageForPosition(rawPosition * (backsScanned ? 2 : 1));
 
-            // Confirmed for every December (1973-1987), not just the
-            // last one - Worcester's December record each year also
-            // catches that year's late-filed certificates, tacked
-            // onto the end of its own range rather than counted
-            // separately (matches the location/month search path's
-            // label for the same records).
-            let label = `Nos. ${record.certStart}-${record.certEnd}`;
-
-            if (record.split) {
-                label = `(${DATA.formatSplitLabel(record.split)}) ${label}`;
-            }
-
-            if (record.location === "Worcester" && record.month === 12) {
-                label = `(${DATA.WORCESTER_LATE_FILES_LABEL}) ${label}`;
-            }
+            let label = buildRecordLabel(record);
 
             return [
                 this.createResult({
