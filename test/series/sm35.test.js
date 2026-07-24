@@ -17,7 +17,7 @@ test("SM35-1, SM35-36, SM35-72 resolve to the exact given archive.org URLs", () 
 
     assert.equal(
         lookup({ series: "SM35-72" })[0].url,
-        "https://archive.org/details/reclaim-the-records-maryland-birth-certificates-1914-1922-sm-35-72/Reclaim_The_Records_-_Maryland_Birth_Certificates_-_1914-1922_-_SM35-sr3715/"
+        "https://archive.org/details/reclaim-the-records-maryland-birth-certificates-1914-1922-sm-35-36/Reclaim_The_Records_-_Maryland_Birth_Certificates_-_1914-1922_-_SM35-sr3715/"
     );
 });
 
@@ -34,7 +34,7 @@ test("every SM35-1 through SM35-72 resolves to an archive.org URL", () => {
 test("SM35-33's irregular sr value (3676-A) is preserved verbatim in the URL", () => {
     assert.equal(
         lookup({ series: "SM35-33" })[0].url,
-        "https://archive.org/details/reclaim-the-records-maryland-birth-certificates-1914-1922-sm-35-33/Reclaim_The_Records_-_Maryland_Birth_Certificates_-_1914-1922_-_SM35-sr3676-A/"
+        "https://archive.org/details/reclaim-the-records-maryland-birth-certificates-1914-1922-sm-35-1/Reclaim_The_Records_-_Maryland_Birth_Certificates_-_1914-1922_-_SM35-sr3676-A/"
     );
 });
 
@@ -69,7 +69,7 @@ test("location/date search returns every file for the matching year, regardless 
 });
 
 
-test("each year-search result carries the finding aid's own description as its label", () => {
+test("each year-search result carries the MSA guide's own description as its label", () => {
     const results = lookup({ location: "Talbot", month: 1, year: 1914, recordType: "birth" });
     const first = results.find(r => r.number === 1);
 
@@ -134,4 +134,30 @@ test("listSeries() reports SM35 as a birth series with location search implement
     assert.ok(series);
     assert.equal(series.recordType, "birth");
     assert.equal(series.supportsLocationSearch, true);
+});
+
+
+test("regression: SM35's archive.org collection identifier stays fixed per shared block", () => {
+
+    // Confirmed against archive.org: "SM35 1-35" and "SM35 36-72".
+    const block1First = lookup({ series: "SM35-1" })[0].url;
+    const block1Last = lookup({ series: "SM35-35" })[0].url;
+    const block2First = lookup({ series: "SM35-36" })[0].url;
+    const block2Last = lookup({ series: "SM35-72" })[0].url;
+
+    assert.ok(block1First.includes("sm-35-1/"));
+    assert.ok(block1Last.includes("sm-35-1/"));
+    assert.ok(block2First.includes("sm-35-36/"));
+    assert.ok(block2Last.includes("sm-35-36/"));
+
+    // The two examples given directly, confirmed correct against
+    // archive.org.
+    assert.equal(
+        lookup({ series: "SM35-36" })[0].url,
+        "https://archive.org/details/reclaim-the-records-maryland-birth-certificates-1914-1922-sm-35-36/Reclaim_The_Records_-_Maryland_Birth_Certificates_-_1914-1922_-_SM35-sr3679/"
+    );
+    assert.equal(
+        lookup({ series: "SM35-37" })[0].url,
+        "https://archive.org/details/reclaim-the-records-maryland-birth-certificates-1914-1922-sm-35-36/Reclaim_The_Records_-_Maryland_Birth_Certificates_-_1914-1922_-_SM35-sr3680/"
+    );
 });
