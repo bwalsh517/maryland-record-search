@@ -281,6 +281,23 @@ if (typeof require !== "undefined") {
 
 
         /**
+         * Every record for a given month/year, across every location -
+         * for browsing or comparing against the source directly, not
+         * narrowed to one county. Optional; subclasses that support it
+         * override this. Sort order should match whatever the series'
+         * own source uses by default (for SE46, that's ascending
+         * record number, not alphabetical - see se46.js).
+         *
+         * @param {number} _month - 1-12.
+         * @param {number} _year
+         * @returns {Array.<LookupResult>} Every record for that month, possibly empty.
+         */
+        lookupAllForMonth(_month, _year) {
+            return [];
+        }
+
+
+        /**
          * The part of certificate-query parsing that's identical
          * across every series that has one: an optional "YYYY-" year
          * prefix, and the legacy "LETTER-NUMBER" dash style (e.g.

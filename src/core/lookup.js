@@ -26,6 +26,7 @@ if (typeof require !== "undefined") {
      * @property {?object} dateRange - {startYear, startMonth, endYear, endMonth}, or null if unrestricted.
      * @property {?object} seriesIdRange - {start, end} in the series' own numbering, or null.
      * @property {boolean} supportsLocationSearch
+     * @property {boolean} supportsAllLocationsSearch - Whether lookup({ month, year }) with location omitted returns every jurisdiction's records for that period.
      * @property {boolean} supportsCertificateNumberSearch
      * @property {?object} certificateSearchRange - Defaults to dateRange when certificate search is supported; null otherwise.
      */
@@ -98,6 +99,14 @@ if (typeof require !== "undefined") {
                 return lookupMonth(options);
             }
 
+            if (!options.location && options.month && options.year) {
+                return lookupMonthAllLocations(options);
+            }
+
+            if (!options.location && options.year && !options.month) {
+                return lookupYearAllLocations(options);
+            }
+
             return [];
 
         } catch {
@@ -148,6 +157,58 @@ if (typeof require !== "undefined") {
         return sortByWeight(candidates.flatMap(series =>
             series.lookup({ location, month, year })
         ));
+    }
+
+
+    /**
+     * Every record for a given month/year, across every location - for
+     * browsing a whole month at once or comparing against the source
+     * directly, rather than narrowing to one county first. Only
+     * series that implement lookupAllForMonth() support this; every
+     * other series contributes nothing here, the same way a series
+     * without lookupLocationMonthYear() contributes nothing to a
+     * normal location search.
+     *
+     * Not part of the public API - lookup({ month, year, recordType })
+     * with location omitted calls this internally.
+     */
+    function lookupMonthAllLocations(options) {
+
+        const { month, year, recordType } = options;
+
+        const candidates = ns.SERIES.filter(series =>
+            (!recordType || series.seriesType === recordType) &&
+            series.lookupAllForMonth !== ns.BaseSeries.prototype.lookupAllForMonth &&
+            series.inDateRange(month, year)
+        );
+
+        return sortByWeight(candidates.flatMap(series =>
+            series.lookupAllForMonth(month, year)
+        ));
+    }
+
+
+    /**
+     * Every record for a given year, across every location - loops
+     * lookupMonthAllLocations() across all 12 months and concatenates,
+     * the same way lookupYear() loops lookupMonth() for one location.
+     * A whole grid-era year of SE46 is several hundred results; that's
+     * expected, not a bug - this is meant for bulk comparison against
+     * the source, not a narrowed everyday search.
+     *
+     * Not part of the public API - lookup({ year, recordType }) with
+     * both location and month omitted calls this internally.
+     */
+    function lookupYearAllLocations(options) {
+
+        const { year, recordType } = options;
+        const results = [];
+
+        for (let month = 1; month <= 12; month++) {
+            results.push(...lookupMonthAllLocations({ month, year, recordType }));
+        }
+
+        return results;
     }
 
 
@@ -352,6 +413,8 @@ if (typeof require !== "undefined") {
                 seriesIdRange: series.seriesIdRange || null,
                 supportsLocationSearch:
                     series.lookupLocationMonthYear !== ns.BaseSeries.prototype.lookupLocationMonthYear,
+                supportsAllLocationsSearch:
+                    series.lookupAllForMonth !== ns.BaseSeries.prototype.lookupAllForMonth,
                 supportsCertificateNumberSearch,
                 // Assumed to match the series' full dateRange unless a
                 // series explicitly sets its own certificateSearchRange
