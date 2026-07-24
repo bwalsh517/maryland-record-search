@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.4.2
+
+### Fixed
+
+- SM35's archive.org URL now uses each shared block's fixed
+  collection number (1-35, 36-72) instead of each record's own
+  number - only the first record in each block resolved correctly
+  before this fix.
+
 ## 1.4.1
 
 ### Added
