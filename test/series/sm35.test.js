@@ -31,10 +31,12 @@ test("every SM35-1 through SM35-72 resolves to an archive.org URL", () => {
 });
 
 
-test("SM35-33's irregular sr value (3676-A) is preserved verbatim in the URL", () => {
+test("regression: SM35-33's irregular sr value (3676-A) uses only the numeric portion in the URL", () => {
+    // The "-A" is part of the MSA guide's own identifier, not the
+    // archive.org file name.
     assert.equal(
         lookup({ series: "SM35-33" })[0].url,
-        "https://archive.org/details/reclaim-the-records-maryland-birth-certificates-1914-1922-sm-35-1/Reclaim_The_Records_-_Maryland_Birth_Certificates_-_1914-1922_-_SM35-sr3676-A/"
+        "https://archive.org/details/reclaim-the-records-maryland-birth-certificates-1914-1922-sm-35-1/Reclaim_The_Records_-_Maryland_Birth_Certificates_-_1914-1922_-_SM35-sr3676/"
     );
 });
 

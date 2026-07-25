@@ -477,11 +477,17 @@ if (typeof require !== "undefined") {
                 const block = this.ARCHIVE_BLOCKS.find(b => number >= b.start && number <= b.end);
                 const collection = block ? block.collection : number;
 
+                // sr can carry a letter suffix (e.g. "3676-A") that's
+                // part of the MSA guide's own identifier but not part
+                // of the archive.org file name - only the numeric
+                // portion is used there.
+                const srNumber = record.sr.match(/^\d+/)[0];
+
                 return (
                     "https://archive.org/details/" +
                     `reclaim-the-records-maryland-birth-certificates-1914-1922-sm-35-${collection}` +
                     "/" +
-                    `Reclaim_The_Records_-_Maryland_Birth_Certificates_-_1914-1922_-_SM35-sr${record.sr}` +
+                    `Reclaim_The_Records_-_Maryland_Birth_Certificates_-_1914-1922_-_SM35-sr${srNumber}` +
                     "/"
                 );
             }
