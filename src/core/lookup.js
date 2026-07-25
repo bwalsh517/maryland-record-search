@@ -203,9 +203,19 @@ if (typeof require !== "undefined") {
 
         const { year, recordType } = options;
         const results = [];
+        const seen = new Set();
 
         for (let month = 1; month <= 12; month++) {
-            results.push(...lookupMonthAllLocations({ month, year, recordType }));
+            for (const result of lookupMonthAllLocations({ month, year, recordType })) {
+                // A record spanning multiple months (SM35's shape,
+                // unlike SE46's one-record-one-month grid) would
+                // otherwise appear once per month it touches here.
+                const key = `${result.series}-${result.number}`;
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    results.push(result);
+                }
+            }
         }
 
         return results;

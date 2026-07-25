@@ -133,3 +133,104 @@ test("every COUNTY_CODES entry (except Baltimore City) resolves to a real BASE_C
         );
     }
 });
+
+
+test("simplifyCountyRanges merges touching ranges and detects full statewide coverage", () => {
+    // Real SM35-1 January case: three raw fragments that union to
+    // full coverage, none missing.
+    const result = counties.simplifyCountyRanges([
+        { start: "AL", end: "QA" },
+        { start: "WA", end: "WO" },
+        { start: "QA", end: "WA" }
+    ]);
+    assert.equal(result, null);
+});
+
+
+test("simplifyCountyRanges: three fragments in a different order still merge to full coverage", () => {
+    const result = counties.simplifyCountyRanges([
+        { start: "AL", end: "CV" },
+        { start: "MO", end: "WO" },
+        { start: "CA", end: "KE" }
+    ]);
+    assert.equal(result, null);
+});
+
+
+test("simplifyCountyRanges: a real gap survives simplification, not silently merged away", () => {
+    const result = counties.simplifyCountyRanges([
+        { start: "AL", end: "CV" },
+        { start: "MO", end: "WO" },
+        { start: "CR", end: "KE" }
+    ]);
+    // Caroline (between Calvert and Carroll) is the real gap.
+    assert.deepEqual(result, [
+        { start: "Allegany", end: "Calvert" },
+        { start: "Carroll", end: "Worcester" }
+    ]);
+});
+
+
+test("simplifyCountyRanges: real SM35-42/43 adjacency (AL-CR then CE-WO) each stay their own simplified range", () => {
+    const record42 = counties.simplifyCountyRanges([{ start: "AL", end: "CR" }]);
+    const record43 = counties.simplifyCountyRanges([{ start: "CE", end: "WO" }]);
+
+    assert.deepEqual(record42, [{ start: "Allegany", end: "Carroll" }]);
+    assert.deepEqual(record43, [{ start: "Cecil", end: "Worcester" }]);
+});
+
+
+test("simplifyCountyRanges: a single range needing no merge passes through with canonical names", () => {
+    const result = counties.simplifyCountyRanges([{ start: "CV", end: "WO" }]);
+    assert.deepEqual(result, [{ start: "Calvert", end: "Worcester" }]);
+});
+
+
+test("simplifyCountyRanges: a single county (start === end) is preserved as a one-county range", () => {
+    const result = counties.simplifyCountyRanges([{ start: "WO", end: "WO" }]);
+    assert.deepEqual(result, [{ start: "Worcester", end: "Worcester" }]);
+});
+
+
+test("simplifyCountyRanges: accepts full county names, not just 2-letter codes", () => {
+    const result = counties.simplifyCountyRanges([{ start: "Allegany", end: "Calvert" }]);
+    assert.deepEqual(result, [{ start: "Allegany", end: "Calvert" }]);
+});
+
+
+test("simplifyCountyRanges: order within a pair doesn't matter, output is always low-to-high", () => {
+    const result = counties.simplifyCountyRanges([{ start: "WO", end: "CV" }]);
+    assert.deepEqual(result, [{ start: "Calvert", end: "Worcester" }]);
+});
+
+
+test("simplifyCountyRanges: overlapping (not just touching) ranges merge correctly", () => {
+    // Two ranges that genuinely overlap, not just sit adjacent.
+    const result = counties.simplifyCountyRanges([
+        { start: "AL", end: "FR" },
+        { start: "CV", end: "GA" }
+    ]);
+    assert.deepEqual(result, [{ start: "Allegany", end: "Garrett" }]);
+});
+
+
+test("isCountyInRange: a county inside the range returns true", () => {
+    assert.equal(counties.isCountyInRange("Anne Arundel", "Allegany", "Baltimore"), true);
+});
+
+
+test("isCountyInRange: a county outside the range returns false", () => {
+    assert.equal(counties.isCountyInRange("Wicomico", "Allegany", "Baltimore"), false);
+});
+
+
+test("isCountyInRange: accepts 2-letter codes for all three arguments", () => {
+    assert.equal(counties.isCountyInRange("AA", "AL", "BA"), true);
+    assert.equal(counties.isCountyInRange("WI", "AL", "BA"), false);
+});
+
+
+test("isCountyInRange: boundary counties (start and end themselves) return true", () => {
+    assert.equal(counties.isCountyInRange("Allegany", "Allegany", "Baltimore"), true);
+    assert.equal(counties.isCountyInRange("Baltimore", "Allegany", "Baltimore"), true);
+});
