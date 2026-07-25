@@ -212,3 +212,25 @@ test("simplifyCountyRanges: overlapping (not just touching) ranges merge correct
     ]);
     assert.deepEqual(result, [{ start: "Allegany", end: "Garrett" }]);
 });
+
+
+test("isCountyInRange: a county inside the range returns true", () => {
+    assert.equal(counties.isCountyInRange("Anne Arundel", "Allegany", "Baltimore"), true);
+});
+
+
+test("isCountyInRange: a county outside the range returns false", () => {
+    assert.equal(counties.isCountyInRange("Wicomico", "Allegany", "Baltimore"), false);
+});
+
+
+test("isCountyInRange: accepts 2-letter codes for all three arguments", () => {
+    assert.equal(counties.isCountyInRange("AA", "AL", "BA"), true);
+    assert.equal(counties.isCountyInRange("WI", "AL", "BA"), false);
+});
+
+
+test("isCountyInRange: boundary counties (start and end themselves) return true", () => {
+    assert.equal(counties.isCountyInRange("Allegany", "Allegany", "Baltimore"), true);
+    assert.equal(counties.isCountyInRange("Baltimore", "Allegany", "Baltimore"), true);
+});
