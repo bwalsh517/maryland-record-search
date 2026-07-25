@@ -161,3 +161,87 @@ test("regression: SM35's archive.org collection identifier stays fixed per share
         "https://archive.org/details/reclaim-the-records-maryland-birth-certificates-1914-1922-sm-35-36/Reclaim_The_Records_-_Maryland_Birth_Certificates_-_1914-1922_-_SM35-sr3680/"
     );
 });
+
+
+test("STANDARD_RECORDS_1_72 covers exactly the 72 records with real archive.org scans", () => {
+
+    const sm35 = require("../../src/series/sm35.js");
+
+    assert.equal(sm35.STANDARD_RECORDS_1_72.length, 72);
+    assert.deepEqual(
+        sm35.STANDARD_RECORDS_1_72.map(r => r.number),
+        Array.from({ length: 72 }, (_, i) => i + 1)
+    );
+});
+
+
+test("STANDARD_RECORDS_1_72: SM35-1's January is full coverage (no split), February is Allegany-Baltimore", () => {
+
+    const sm35 = require("../../src/series/sm35.js");
+    const record = sm35.STANDARD_RECORDS_1_72.find(r => r.number === 1);
+
+    const jan = record.dateRanges.find(dr => dr.startMonth === 1);
+    const feb = record.dateRanges.find(dr => dr.startMonth === 2);
+
+    assert.equal(jan.split, undefined);
+    assert.deepEqual(feb.split, [{ start: "Allegany", end: "Baltimore" }]);
+    assert.equal(record.note, "Jan. AL-QA, WA-WO, QA-WA, Feb. AL-BA");
+});
+
+
+test("STANDARD_RECORDS_1_72: SM35-42/43's April boundary is confirmed adjacent (Allegany-Carroll, then Cecil-Worcester)", () => {
+
+    const sm35 = require("../../src/series/sm35.js");
+    const r42 = sm35.STANDARD_RECORDS_1_72.find(r => r.number === 42);
+    const r43 = sm35.STANDARD_RECORDS_1_72.find(r => r.number === 43);
+
+    const r42Apr = r42.dateRanges.find(dr => dr.startMonth === 4);
+    const r43Apr = r43.dateRanges.find(dr => dr.startMonth === 4);
+
+    assert.deepEqual(r42Apr.split, [{ start: "Allegany", end: "Carroll" }]);
+    assert.deepEqual(r43Apr.split, [{ start: "Cecil", end: "Worcester" }]);
+});
+
+
+test("STANDARD_RECORDS_1_72: every year/month combination covers all 23 counties once every touching record is combined", () => {
+
+    const counties = require("../../src/core/counties.js");
+    const sm35 = require("../../src/series/sm35.js");
+
+    const order = counties.alphabeticalCountyOrder();
+    const position = name => order.indexOf(name) + 1;
+
+    const byYearMonth = {};
+
+    for (const record of sm35.STANDARD_RECORDS_1_72) {
+        for (const dr of record.dateRanges) {
+            const key = `${dr.startYear}-${dr.startMonth}`;
+            byYearMonth[key] = byYearMonth[key] || [];
+            if (dr.split) {
+                for (const s of dr.split) {
+                    byYearMonth[key].push([position(s.start), position(s.end)]);
+                }
+            } else {
+                byYearMonth[key].push([1, order.length]);
+            }
+        }
+    }
+
+    const keys = Object.keys(byYearMonth);
+    assert.equal(keys.length, 108);
+
+    for (const key of keys) {
+        const ranges = byYearMonth[key].sort((a, b) => a[0] - b[0]);
+        const merged = [ranges[0].slice()];
+        for (const [s, e] of ranges.slice(1)) {
+            const last = merged[merged.length - 1];
+            if (s <= last[1] + 1) {
+                last[1] = Math.max(last[1], e);
+            } else {
+                merged.push([s, e]);
+            }
+        }
+        const full = merged.length === 1 && merged[0][0] === 1 && merged[0][1] === order.length;
+        assert.ok(full, `${key} does not cover all 23 counties: ${JSON.stringify(merged)}`);
+    }
+});
