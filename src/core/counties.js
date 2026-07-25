@@ -254,6 +254,26 @@ if (typeof require !== "undefined") {
         return merged.map(([s, e]) => ({ start: order[s - 1], end: order[e - 1] }));
     }
 
+    /**
+     * Whether a county falls within a {start, end} range, by real
+     * alphabetical position - not string comparison, for the same
+     * reason simplifyCountyRanges() isn't. Accepts any
+     * normalizeCounty-recognized form for all three arguments.
+     *
+     * @param {string} county
+     * @param {string} start
+     * @param {string} end
+     * @returns {boolean}
+     */
+    function isCountyInRange(county, start, end) {
+
+        const order = alphabeticalCountyOrder();
+        const position = name => order.indexOf(normalizeCounty(name)) + 1;
+
+        const target = position(county);
+        return target >= position(start) && target <= position(end);
+    }
+
     const counties = {
         BASE_COUNTIES,
         COUNTY_ALIASES,
@@ -262,7 +282,8 @@ if (typeof require !== "undefined") {
         alphabeticalCountyOrder,
         alphabeticalCountyCityOrder,
         normalizeCounty,
-        simplifyCountyRanges
+        simplifyCountyRanges,
+        isCountyInRange
     };
 
     if (typeof module !== "undefined" && module.exports) {

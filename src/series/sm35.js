@@ -1,11 +1,13 @@
 if (typeof require !== "undefined") {
     require("../core/base-series.js");
+    require("../core/counties.js");
 }
 
 (function (global) {
     "use strict";
 
     const BaseSeries = global.MDRecordSearch.BaseSeries;
+    const counties = global.MDRecordSearch.counties;
 
     class SM35Series extends BaseSeries {
 
@@ -644,17 +646,24 @@ if (typeof require !== "undefined") {
         }
 
 
+        // Kept for the generic cross-series seriesIdRange sanity
+        // check (see test/core/series-id-range.test.js) - not used by
+        // lookupLocationMonthYear() below, which reads STANDARD_RECORDS
+        // directly. A record's dateRanges could in principle span more
+        // than one year, though no case in this data actually does.
         buildIndex() {
 
             const index = {};
 
-            for (const record of this.RECORDS) {
+            for (const record of this.STANDARD_RECORDS) {
+                const years = new Set(record.dateRanges.map(dr => dr.startYear));
 
-                if (!index[record.year]) {
-                    index[record.year] = [];
+                for (const year of years) {
+                    if (!index[year]) {
+                        index[year] = [];
+                    }
+                    index[year].push(record);
                 }
-
-                index[record.year].push(record);
             }
 
             return index;
@@ -662,40 +671,78 @@ if (typeof require !== "undefined") {
 
 
         /**
-         * Deliberately basic: each file's actual coverage is a specific
-         * (sometimes multi-month, sometimes multi-county-range,
-         * occasionally cross-year) span described in free text in the
-         * MSA guide ("Jan. AL-QA, WA-WO, QA-WA, Feb. AL-BA") rather
-         * than a clean per-county-per-month grid like the other series.
-         * Parsing that reliably - including handling "SM" meaning Saint
-         * Mary's County here but the series name elsewhere - is real
-         * work that hasn't been done yet.
+         * Filters STANDARD_RECORDS by month/year, then - for any
+         * record whose that-month entry has a split - checks whether
+         * the queried county actually falls in it. A month with no
+         * split on that entry is full statewide coverage, so every
+         * county matches.
          *
-         * So for now this ignores the location and month arguments
-         * entirely (beyond canHandle() already excluding Baltimore
-         * City and out-of-range dates) and returns every file for the
-         * matching year, letting the description field tell the caller
-         * what's actually in each one. That means a location/date
-         * search for any county in a covered year returns the same
-         * full set of ~8 files for that year - not wrong, just coarser
-         * than the other series' exact per-county results.
+         * label stays the record's full verbatim note (every month
+         * that file covers, not just the queried one) - a researcher
+         * benefits from seeing the whole file's real coverage, the
+         * same reasoning that kept note verbatim in the first place.
          */
         lookupLocationMonthYear(location, month, year) {
 
-            const records = this.index[year];
+            const results = [];
 
-            if (!records) {
-                return [];
+            for (const record of this.STANDARD_RECORDS) {
+                const dr = record.dateRanges.find(d => d.startYear === year && d.startMonth === month);
+                if (!dr) {
+                    continue;
+                }
+
+                const covered = !dr.split || dr.split.some(s => counties.isCountyInRange(location, s.start, s.end));
+                if (!covered) {
+                    continue;
+                }
+
+                results.push(this.createResult({
+                    year,
+                    month,
+                    location: counties.normalizeCounty(location),
+                    number: record.number,
+                    label: record.note,
+                    url: this.archiveUrl(record.number)
+                }));
             }
 
-            return records.map(record =>
-                this.createResult({
-                    year: record.year,
+            return results;
+        }
+
+
+        /**
+         * Every record touching a given month/year, across every
+         * county - for browsing a month/year at once, no location
+         * required. Same STANDARD_RECORDS filter as
+         * lookupLocationMonthYear() above, minus the county check.
+         * location is null on every result here - unlike a real
+         * per-record location, SM35's coverage genuinely varies by
+         * county within one record, so there's no single value to put
+         * there; the label (the record's full verbatim note) already
+         * says what's actually covered.
+         */
+        lookupAllForMonth(month, year) {
+
+            const results = [];
+
+            for (const record of this.STANDARD_RECORDS) {
+                const dr = record.dateRanges.find(d => d.startYear === year && d.startMonth === month);
+                if (!dr) {
+                    continue;
+                }
+
+                results.push(this.createResult({
+                    year,
+                    month,
+                    location: null,
                     number: record.number,
-                    label: record.description,
+                    label: record.note,
                     url: this.archiveUrl(record.number)
-                })
-            );
+                }));
+            }
+
+            return results;
         }
 
 

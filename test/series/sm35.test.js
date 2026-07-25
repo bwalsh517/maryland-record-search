@@ -58,14 +58,17 @@ test("SM35 number 0 or past 269 returns no results", () => {
 });
 
 
-test("location/date search returns every file for the matching year, regardless of county", () => {
-    // Deliberately coarse - see the comment on lookupLocationMonthYear()
-    // in src/series/sm35.js for why county/month aren't filtered.
+test("regression: location/date search now returns only records whose that-month coverage actually includes the queried county", () => {
+
+    // Before the STANDARD_RECORDS cutover, every county in a covered
+    // year returned the same full set of files regardless of month or
+    // county. June 1914 Anne Arundel and November 1914 Worcester now
+    // correctly resolve to different records.
     const forAnneArundel = lookup({ location: "Anne Arundel", month: 6, year: 1914, recordType: "birth" });
     const forWorcester = lookup({ location: "Worcester", month: 11, year: 1914, recordType: "birth" });
 
-    assert.equal(forAnneArundel.length, 8);
-    assert.deepEqual(forAnneArundel, forWorcester);
+    assert.deepEqual(forAnneArundel.map(r => r.number), [4]);
+    assert.deepEqual(forWorcester.map(r => r.number), [7]);
 });
 
 
@@ -77,20 +80,25 @@ test("each year-search result carries the MSA guide's own description as its lab
 });
 
 
-test("lookup() only queries SM35 once per year, not once per month", () => {
+test("lookup() only queries SM35 once per month, not once per record", () => {
+    // Talbot happens to fall within all 8 records touching 1918
+    // somewhere across their multi-month spans - this confirms the
+    // dispatch count, not broad matching (see the regression test
+    // above for that).
     const results = lookup({ location: "Talbot", year: 1918, recordType: "birth" });
     assert.equal(results.length, 8);
 });
 
 
-test("1923-1951 has full year-level location search, resolving through the MSA guide", () => {
+test("1923-1951 has precise county/month location search, resolving through the MSA guide", () => {
+
     const results = lookup({ location: "Talbot", month: 6, year: 1930, recordType: "birth" });
 
-    assert.equal(results.length, 7);
-    assert.ok(results.some(r => r.number === 124 && r.label === "Jan. AL-WO, Feb. AL-MO"));
+    assert.deepEqual(results.map(r => r.number), [127]);
+    assert.equal(results[0].label, "Jun. CR-WO, Jul. AL-WO");
 
     // URLs for this range use the MSA guide pattern, not archive.org,
-    // regardless of having sr values in RECORDS.
+    // regardless of having sr values in STANDARD_RECORDS.
     assert.ok(results.every(r => r.url.startsWith("https://guide.msa.maryland.gov/")));
 });
 
@@ -322,4 +330,41 @@ test("STANDARD_RECORDS: every county/month named inside a Rets./Ret./Certs. for 
     }
 
     assert.equal(totalPairs, 49);
+});
+
+
+test("regression: a full-coverage month (no split) matches every county", () => {
+    const results = lookup({ location: "Wicomico", month: 1, year: 1914, recordType: "birth" });
+    assert.deepEqual(results.map(r => r.number), [1]);
+});
+
+
+test("regression: a county outside one record's range for a month correctly resolves to a different record instead", () => {
+    // SM35-1's February is Allegany-Baltimore only, so Worcester isn't
+    // in it - SM35-2's own February range (Calvert-Worcester) is.
+    const results = lookup({ location: "Worcester", month: 2, year: 1914, recordType: "birth" });
+    assert.deepEqual(results.map(r => r.number), [2]);
+});
+
+
+test("regression: the queried location is normalized on the result, regardless of input casing", () => {
+    const result = lookup({ location: "wicomico", month: 1, year: 1914, recordType: "birth" })[0];
+    assert.equal(result.location, "Wicomico");
+});
+
+
+test("lookupAllForMonth: returns every record touching a month/year, no location filter", () => {
+    const results = lookup({ month: 1, year: 1914, recordType: "birth" });
+    assert.deepEqual(results.map(r => r.number), [1]);
+    assert.equal(results[0].location, null);
+});
+
+
+test("regression: whole-year no-location search deduplicates records that span multiple months", () => {
+    // SM35-124 covers Jan and Feb 1930 in one physical record - a
+    // naive month-by-month concatenation would return it twice.
+    const results = lookup({ year: 1930, recordType: "birth" });
+    const numbers = results.map(r => r.number);
+    assert.deepEqual(numbers, [...new Set(numbers)]);
+    assert.deepEqual(numbers, [124, 125, 126, 127, 128, 129, 130]);
 });
