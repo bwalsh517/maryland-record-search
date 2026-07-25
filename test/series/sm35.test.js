@@ -163,22 +163,22 @@ test("regression: SM35's archive.org collection identifier stays fixed per share
 });
 
 
-test("STANDARD_RECORDS_1_72 covers exactly the 72 records with real archive.org scans", () => {
+test("STANDARD_RECORDS covers all 269 records in the series", () => {
 
     const sm35 = require("../../src/series/sm35.js");
 
-    assert.equal(sm35.STANDARD_RECORDS_1_72.length, 72);
+    assert.equal(sm35.STANDARD_RECORDS.length, 269);
     assert.deepEqual(
-        sm35.STANDARD_RECORDS_1_72.map(r => r.number),
-        Array.from({ length: 72 }, (_, i) => i + 1)
+        sm35.STANDARD_RECORDS.map(r => r.number),
+        Array.from({ length: 269 }, (_, i) => i + 1)
     );
 });
 
 
-test("STANDARD_RECORDS_1_72: SM35-1's January is full coverage (no split), February is Allegany-Baltimore", () => {
+test("STANDARD_RECORDS: SM35-1's January is full coverage (no split), February is Allegany-Baltimore", () => {
 
     const sm35 = require("../../src/series/sm35.js");
-    const record = sm35.STANDARD_RECORDS_1_72.find(r => r.number === 1);
+    const record = sm35.STANDARD_RECORDS.find(r => r.number === 1);
 
     const jan = record.dateRanges.find(dr => dr.startMonth === 1);
     const feb = record.dateRanges.find(dr => dr.startMonth === 2);
@@ -189,11 +189,11 @@ test("STANDARD_RECORDS_1_72: SM35-1's January is full coverage (no split), Febru
 });
 
 
-test("STANDARD_RECORDS_1_72: SM35-42/43's April boundary is confirmed adjacent (Allegany-Carroll, then Cecil-Worcester)", () => {
+test("STANDARD_RECORDS: SM35-42/43's April boundary is confirmed adjacent (Allegany-Carroll, then Cecil-Worcester)", () => {
 
     const sm35 = require("../../src/series/sm35.js");
-    const r42 = sm35.STANDARD_RECORDS_1_72.find(r => r.number === 42);
-    const r43 = sm35.STANDARD_RECORDS_1_72.find(r => r.number === 43);
+    const r42 = sm35.STANDARD_RECORDS.find(r => r.number === 42);
+    const r43 = sm35.STANDARD_RECORDS.find(r => r.number === 43);
 
     const r42Apr = r42.dateRanges.find(dr => dr.startMonth === 4);
     const r43Apr = r43.dateRanges.find(dr => dr.startMonth === 4);
@@ -203,7 +203,22 @@ test("STANDARD_RECORDS_1_72: SM35-42/43's April boundary is confirmed adjacent (
 });
 
 
-test("STANDARD_RECORDS_1_72: every year/month combination covers all 23 counties once every touching record is combined", () => {
+test("regression: SM35-227's June coverage includes Anne Arundel, found via its own Rets. of annotation", () => {
+
+    // The main declared range for June was "BA-WO" (Baltimore-Worcester),
+    // but the record's own "Rets. of Jun. BA ..., Jun. AA ..." annotation
+    // names Anne Arundel too - outside that declared range. Anne Arundel
+    // and Baltimore are adjacent, so the real coverage merges into one
+    // continuous range rather than two separate pieces.
+    const sm35 = require("../../src/series/sm35.js");
+    const record = sm35.STANDARD_RECORDS.find(r => r.number === 227);
+    const june = record.dateRanges.find(dr => dr.startMonth === 6);
+
+    assert.deepEqual(june.split, [{ start: "Anne Arundel", end: "Worcester" }]);
+});
+
+
+test("STANDARD_RECORDS: every year/month combination covers all 23 counties once every touching record is combined", () => {
 
     const counties = require("../../src/core/counties.js");
     const sm35 = require("../../src/series/sm35.js");
@@ -213,7 +228,7 @@ test("STANDARD_RECORDS_1_72: every year/month combination covers all 23 counties
 
     const byYearMonth = {};
 
-    for (const record of sm35.STANDARD_RECORDS_1_72) {
+    for (const record of sm35.STANDARD_RECORDS) {
         for (const dr of record.dateRanges) {
             const key = `${dr.startYear}-${dr.startMonth}`;
             byYearMonth[key] = byYearMonth[key] || [];
@@ -228,7 +243,7 @@ test("STANDARD_RECORDS_1_72: every year/month combination covers all 23 counties
     }
 
     const keys = Object.keys(byYearMonth);
-    assert.equal(keys.length, 108);
+    assert.equal(keys.length, 450);
 
     for (const key of keys) {
         const ranges = byYearMonth[key].sort((a, b) => a[0] - b[0]);
@@ -244,4 +259,67 @@ test("STANDARD_RECORDS_1_72: every year/month combination covers all 23 counties
         const full = merged.length === 1 && merged[0][0] === 1 && merged[0][1] === order.length;
         assert.ok(full, `${key} does not cover all 23 counties: ${JSON.stringify(merged)}`);
     }
+});
+
+
+test("STANDARD_RECORDS: every county/month named inside a Rets./Ret./Certs. for annotation is accounted for by that month's own declared range", () => {
+
+    const counties = require("../../src/core/counties.js");
+    const sm35 = require("../../src/series/sm35.js");
+
+    const order = counties.alphabeticalCountyOrder();
+    const position = name => order.indexOf(name) + 1;
+    const MONTHS = { jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6, jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12 };
+    const TRIGGERS = ["Rets. of", "Ret. of", "Certs. for"];
+
+    function coversCounty(record, month, countyName) {
+        const dr = record.dateRanges.find(d => d.startMonth === month);
+        if (!dr) return null;
+        if (!dr.split) return true;
+        const pos = position(countyName);
+        return dr.split.some(s => pos >= position(s.start) && pos <= position(s.end));
+    }
+
+    let totalPairs = 0;
+
+    for (const record of sm35.STANDARD_RECORDS) {
+        let annotationText = null;
+        for (const trigger of TRIGGERS) {
+            const idx = record.note.indexOf(trigger);
+            if (idx !== -1) {
+                annotationText = record.note.slice(idx + trigger.length);
+                break;
+            }
+        }
+        if (!annotationText) continue;
+
+        const chunks = annotationText.split(",").map(c => c.trim()).filter(Boolean);
+        let currentMonth = null;
+
+        for (const chunk of chunks) {
+            let rest = chunk;
+            const monthMatch = chunk.match(/^([A-Za-z]{3})\.\s+(.+)$/);
+            if (monthMatch && MONTHS[monthMatch[1].toLowerCase()]) {
+                currentMonth = MONTHS[monthMatch[1].toLowerCase()];
+                rest = monthMatch[2];
+            }
+            if (currentMonth === null) continue;
+
+            const countyMatch = rest.match(/^([A-Za-z]{2})\b/);
+            if (!countyMatch) continue;
+
+            let countyName;
+            try {
+                countyName = counties.normalizeCounty(countyMatch[1].toLowerCase());
+            } catch {
+                continue;
+            }
+
+            totalPairs++;
+            const covered = coversCounty(record, currentMonth, countyName);
+            assert.equal(covered, true, `SM35-${record.number}: month ${currentMonth}, ${countyName} not covered (note: ${record.note})`);
+        }
+    }
+
+    assert.equal(totalPairs, 49);
 });
