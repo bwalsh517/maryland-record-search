@@ -205,6 +205,55 @@ if (typeof require !== "undefined") {
         throw new CountyNotFoundError(value);
     }
 
+    /**
+     * Takes a list of {start, end} county ranges (any normalizeCounty-
+     * recognized form - 2-letter code, full name, etc.) and returns
+     * the minimal equivalent: touching/overlapping ranges merged,
+     * canonical BASE_COUNTIES spelling throughout. Returns null if the
+     * merged result is full statewide coverage (Allegany-Worcester) -
+     * that's not a range to record, it's the absence of one.
+     *
+     * Order matters here in a way it doesn't for a plain alphabetical
+     * sort: county comparisons use position in alphabeticalCountyOrder(),
+     * never the raw 2-letter code - "CR" sorts before "CV" as strings
+     * (R < V), but Calvert (CV) actually comes before Carroll (CR) in
+     * real county order. Comparing codes directly instead of resolved
+     * positions would silently produce the wrong merge for any pair
+     * that crosses a mismatch like that.
+     *
+     * @param {Array.<{start: string, end: string}>} pairs
+     * @returns {?Array.<{start: string, end: string}>}
+     */
+    function simplifyCountyRanges(pairs) {
+
+        const order = alphabeticalCountyOrder();
+        const position = name => order.indexOf(name) + 1;
+
+        const positions = pairs.map(({ start, end }) => {
+            const s = position(normalizeCounty(start));
+            const e = position(normalizeCounty(end));
+            return s <= e ? [s, e] : [e, s];
+        });
+
+        positions.sort((a, b) => a[0] - b[0]);
+
+        const merged = [positions[0]];
+        for (const [s, e] of positions.slice(1)) {
+            const last = merged[merged.length - 1];
+            if (s <= last[1] + 1) {
+                last[1] = Math.max(last[1], e);
+            } else {
+                merged.push([s, e]);
+            }
+        }
+
+        if (merged.length === 1 && merged[0][0] === 1 && merged[0][1] === order.length) {
+            return null;
+        }
+
+        return merged.map(([s, e]) => ({ start: order[s - 1], end: order[e - 1] }));
+    }
+
     const counties = {
         BASE_COUNTIES,
         COUNTY_ALIASES,
@@ -212,7 +261,8 @@ if (typeof require !== "undefined") {
         CountyNotFoundError,
         alphabeticalCountyOrder,
         alphabeticalCountyCityOrder,
-        normalizeCounty
+        normalizeCounty,
+        simplifyCountyRanges
     };
 
     if (typeof module !== "undefined" && module.exports) {
