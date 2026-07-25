@@ -351,3 +351,20 @@ test("regression: the queried location is normalized on the result, regardless o
     const result = lookup({ location: "wicomico", month: 1, year: 1914, recordType: "birth" })[0];
     assert.equal(result.location, "Wicomico");
 });
+
+
+test("lookupAllForMonth: returns every record touching a month/year, no location filter", () => {
+    const results = lookup({ month: 1, year: 1914, recordType: "birth" });
+    assert.deepEqual(results.map(r => r.number), [1]);
+    assert.equal(results[0].location, null);
+});
+
+
+test("regression: whole-year no-location search deduplicates records that span multiple months", () => {
+    // SM35-124 covers Jan and Feb 1930 in one physical record - a
+    // naive month-by-month concatenation would return it twice.
+    const results = lookup({ year: 1930, recordType: "birth" });
+    const numbers = results.map(r => r.number);
+    assert.deepEqual(numbers, [...new Set(numbers)]);
+    assert.deepEqual(numbers, [124, 125, 126, 127, 128, 129, 130]);
+});

@@ -711,6 +711,41 @@ if (typeof require !== "undefined") {
         }
 
 
+        /**
+         * Every record touching a given month/year, across every
+         * county - for browsing a month/year at once, no location
+         * required. Same STANDARD_RECORDS filter as
+         * lookupLocationMonthYear() above, minus the county check.
+         * location is null on every result here - unlike a real
+         * per-record location, SM35's coverage genuinely varies by
+         * county within one record, so there's no single value to put
+         * there; the label (the record's full verbatim note) already
+         * says what's actually covered.
+         */
+        lookupAllForMonth(month, year) {
+
+            const results = [];
+
+            for (const record of this.STANDARD_RECORDS) {
+                const dr = record.dateRanges.find(d => d.startYear === year && d.startMonth === month);
+                if (!dr) {
+                    continue;
+                }
+
+                results.push(this.createResult({
+                    year,
+                    month,
+                    location: null,
+                    number: record.number,
+                    label: record.note,
+                    url: this.archiveUrl(record.number)
+                }));
+            }
+
+            return results;
+        }
+
+
         // Full override, not buildArchiveUrl/ARCHIVE_RANGES - the
         // sr-based archive.org URL for 1-72 doesn't fit the shared
         // collection/prefix range-table shape used by other series.

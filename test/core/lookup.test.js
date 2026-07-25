@@ -251,8 +251,21 @@ test("lookup() with month + year and no location respects recordType", () => {
 
 test("listSeries() reports supportsAllLocationsSearch accurately", () => {
     const se46 = listSeries().find(s => s.name === "SE46");
+    const sm35 = listSeries().find(s => s.name === "SM35");
     const cm1132 = listSeries().find(s => s.name === "CM1132");
 
     assert.equal(se46.supportsAllLocationsSearch, true);
+    assert.equal(sm35.supportsAllLocationsSearch, true);
     assert.equal(cm1132.supportsAllLocationsSearch, false);
+});
+
+
+test("regression: lookup() with year and no month/location deduplicates a record that spans multiple months", () => {
+    // SM35's shape (one record can cover several months) is different
+    // from SE46's (one record, one month) - a naive month-by-month
+    // concatenation for the whole-year case would return the same
+    // record once per month it touches.
+    const results = lookup({ year: 1930, recordType: "birth" }).filter(r => r.series === "SM35");
+    const numbers = results.map(r => r.number);
+    assert.deepEqual(numbers, [...new Set(numbers)]);
 });
