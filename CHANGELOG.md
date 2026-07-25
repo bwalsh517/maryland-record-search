@@ -1,5 +1,26 @@
 # Changelog
 
+## 1.5.0
+
+### Added
+
+- SM35 location/month search is now precise - only records whose
+  that-month coverage actually includes the queried county match,
+  instead of every file for the whole year regardless of county.
+- `lookup({ month, year })` and `lookup({ year })` with no location
+  now work for SM35 too, same as SE46.
+- `simplifyCountyRanges()` and `isCountyInRange()` (counties.js) -
+  reusable utilities for merging and checking county ranges by real
+  alphabetical position, not raw 2-letter code order.
+
+### Fixed
+
+- SM35 archive.org URLs for records with a letter-suffixed sr value
+  (e.g. "3676-A") now use only the numeric portion, matching the real
+  file name.
+- A whole-year, no-location search could return the same record more
+  than once if it spans multiple months - now deduplicated.
+
 ## 1.4.2
 
 ### Fixed
