@@ -137,8 +137,13 @@ if (typeof require !== "undefined") {
 
         // SE44 file numbers are grouped into archive.org items in blocks
         // of 1000, so this is a computed formula rather than a lookup
-        // table like the other series - kept as its own override.
+        // table like the other series - kept as its own override. The
+        // final item (msa-se-44-004001) is oversized and holds 4001-5021
+        // instead of splitting off a 005001 item, so the block start is
+        // capped there.
         archiveUrl(number) {
+
+            const LAST_BLOCK_START = 4001;
 
             let start;
 
@@ -147,6 +152,8 @@ if (typeof require !== "undefined") {
             } else {
                 start = Math.floor((number - 1) / 1000) * 1000 + 1;
             }
+
+            start = Math.min(start, LAST_BLOCK_START);
 
             return (
                 "https://archive.org/details/" +
