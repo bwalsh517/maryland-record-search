@@ -83,10 +83,25 @@ test("SE44's computed archiveUrl blocks records in chunks of 1000", () => {
 });
 
 
-test("SE44-5021's URL falls in the 5001 block, matching the last generated record", () => {
+test("SE44's final archive item (004001) is oversized and holds 4001-5021, not split at 5001", () => {
+    assert.equal(
+        lookup({ series: "SE44-4001" })[0].url,
+        "https://archive.org/details/reclaim-the-records-maryland-death-certificates-msa-se-44-004001/Reclaim_The_Records_-_Maryland_Death_Certificates_-_msa_se44_004001/"
+    );
+
+    assert.equal(
+        lookup({ series: "SE44-5000" })[0].url,
+        "https://archive.org/details/reclaim-the-records-maryland-death-certificates-msa-se-44-004001/Reclaim_The_Records_-_Maryland_Death_Certificates_-_msa_se44_005000/"
+    );
+
+    assert.equal(
+        lookup({ series: "SE44-5001" })[0].url,
+        "https://archive.org/details/reclaim-the-records-maryland-death-certificates-msa-se-44-004001/Reclaim_The_Records_-_Maryland_Death_Certificates_-_msa_se44_005001/"
+    );
+
     assert.equal(
         lookup({ series: "SE44-5021" })[0].url,
-        "https://archive.org/details/reclaim-the-records-maryland-death-certificates-msa-se-44-005001/Reclaim_The_Records_-_Maryland_Death_Certificates_-_msa_se44_005021/"
+        "https://archive.org/details/reclaim-the-records-maryland-death-certificates-msa-se-44-004001/Reclaim_The_Records_-_Maryland_Death_Certificates_-_msa_se44_005021/"
     );
 });
 
