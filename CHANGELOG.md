@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.5.1
+
+### Fixed
+
+- SE44's archive.org URL for records 5001-5021 now resolves to the
+  correct final item (msa-se-44-004001), which is oversized and holds
+  4001-5021 in one item - the computed block formula previously split
+  those records off into a nonexistent msa-se-44-005001 item.
+
 ## 1.5.0
 
 ### Added
